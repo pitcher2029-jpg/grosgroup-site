@@ -2,22 +2,26 @@
    Направление: индустриальный монохром — сверхширокий гротеск, чёрные пилюли, металл на тёплом светлом фоне. */
 
 /* ---------- Шрифты ---------- */
+/* Шрифты по ТЗ: логотип — Arimo; весь остальной текст — Cy Grotesk Std Wide (коммерческий, Kobuzan / MyFonts).
+   Пока нет веб-лицензии, работает замена Unbounded; у кого Cy Grotesk Std Wide установлен, браузер возьмёт его.
+   Купленные webfont-файлы положить в assets/fonts/ и раскомментировать:
+@font-face{font-family:"Cy Grotesk Std Wide";font-weight:400;font-display:swap;src:url(../fonts/cy-grotesk-std-wide-regular.woff2) format("woff2")}
+@font-face{font-family:"Cy Grotesk Std Wide";font-weight:700;font-display:swap;src:url(../fonts/cy-grotesk-std-wide-bold.woff2) format("woff2")}
+@font-face{font-family:"Cy Grotesk Std Wide";font-weight:800;font-display:swap;src:url(../fonts/cy-grotesk-std-wide-black.woff2) format("woff2")}
+*/
+@font-face{font-family:"Arimo";font-style:normal;font-weight:700;font-display:swap;src:url(../fonts/arimo-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:400;font-display:swap;src:url(../fonts/unbounded-cyrillic-400-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:400;font-display:swap;src:url(../fonts/unbounded-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:700;font-display:swap;src:url(../fonts/unbounded-cyrillic-700-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:700;font-display:swap;src:url(../fonts/unbounded-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:800;font-display:swap;src:url(../fonts/unbounded-cyrillic-800-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:"Unbounded";font-style:normal;font-weight:800;font-display:swap;src:url(../fonts/unbounded-latin-800-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:"Onest";font-style:normal;font-weight:400;font-display:swap;src:url(../fonts/onest-cyrillic-400-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
-@font-face{font-family:"Onest";font-style:normal;font-weight:400;font-display:swap;src:url(../fonts/onest-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:"Onest";font-style:normal;font-weight:600;font-display:swap;src:url(../fonts/onest-cyrillic-600-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
-@font-face{font-family:"Onest";font-style:normal;font-weight:600;font-display:swap;src:url(../fonts/onest-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 
 /* ---------- Токены ---------- */
 :root{
   /* цвет: тёплая нейтральная шкала, акцент — чёрный */
   --c-bg:#faf9f7;          /* фон страницы = фон исходных изображений */
-  --c-surface:#f1ece8;     /* карточки = фон фото категорий и иконок */
+  --c-surface:#efeae8;     /* по ТЗ: цвет плашек иконок и карточек = фон исходных изображений */
   --c-surface-2:#e6e0dc;
   --c-line:#ddd6d1;
   --c-muted:#5f5852;
@@ -29,8 +33,9 @@
   --c-error-on-ink:#ff9b8f;
   --c-success:#1e6b3a;
 
-  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
-  --f-text:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-display:"Cy Grotesk Std Wide","Unbounded","Arial Black",system-ui,sans-serif;
+  --f-text:var(--f-display);
+  --f-logo:"Arimo",Arial,"Liberation Sans",sans-serif;
 
   /* шкала размеров ×1.25, верх — плавный */
   --fs-xs:.8125rem;   /* 13 */
@@ -105,7 +110,7 @@ svg{width:1em;height:1em}
 .header{position:sticky;top:0;z-index:50;background:rgb(250 249 247 / .92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:box-shadow var(--t-el) var(--ease-io)}
 .header.is-scrolled{box-shadow:0 1px 0 var(--c-line)}
 .header__row{display:flex;align-items:center;gap:var(--s-6);min-height:var(--header-h)}
-.logo{font:600 clamp(1.5rem,1rem + 1.4vw,2.25rem)/1 var(--f-text);letter-spacing:-.01em;text-decoration:none;flex:none}
+.logo{font:700 clamp(1.5rem,1rem + 1.4vw,2.25rem)/1 var(--f-logo);letter-spacing:0;text-decoration:none;flex:none}
 .nav{flex:1}
 .nav__list{display:flex;justify-content:center;gap:clamp(16px,2.6vw,56px)}
 .nav__list a{display:inline-block;padding:var(--s-2) 0;white-space:nowrap;font:400 var(--fs-s)/1.2 var(--f-display);text-decoration:none;position:relative}
@@ -254,7 +259,7 @@ svg{width:1em;height:1em}
 /* ---------- Контакты и форма ---------- */
 .contacts{padding-top:var(--section)}
 .contacts__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s-6);align-items:end;margin-top:clamp(var(--s-5),3vw,var(--s-7))}
-.contacts__media{grid-column:1 / span 3;align-self:center;width:100%}
+.contacts__media{grid-column:1 / span 3;align-self:end;width:100%}
 .contacts__body{grid-column:4 / -1}
 .contacts__list{display:grid;gap:var(--s-1);font:400 var(--fs-l)/1.5 var(--f-display);letter-spacing:-.01em}
 .contacts__list div{display:flex;flex-wrap:wrap;gap:0 .4em}
@@ -287,9 +292,9 @@ svg{width:1em;height:1em}
 .pill--files{flex-wrap:wrap;justify-content:flex-start;gap:var(--s-2);padding:var(--s-2) var(--s-3);text-transform:none;font:400 var(--fs-xs)/1.3 var(--f-text);border-radius:var(--r-l);min-width:0}
 .files__empty{width:100%;text-align:center;color:var(--c-muted)}
 .file-chip{display:inline-flex;align-items:center;gap:var(--s-1);max-width:100%;padding:var(--s-1) var(--s-1) var(--s-1) var(--s-3);background:var(--c-surface);border-radius:var(--r-pill)}
-.file-chip__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16ch}
-.file-chip__size{white-space:nowrap;color:var(--c-muted);font-variant-numeric:tabular-nums}
-.file-chip__rm{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;font-size:14px}
+.file-chip__name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16ch}
+.file-chip__size{flex:none;white-space:nowrap;color:var(--c-muted);font-variant-numeric:tabular-nums}
+.file-chip__rm{flex:none;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;font-size:14px}
 .file-chip__rm:hover{background:var(--c-surface-2)}
 .file-chip__rm:focus-visible{outline:2px solid var(--c-ink);outline-offset:0}
 .pill--submit{min-width:200px;padding-inline:var(--s-7)}
