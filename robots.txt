@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /roy/
+
+Sitemap: https://pitcher2029-jpg.github.io/grosgroup-site/sitemap.xml

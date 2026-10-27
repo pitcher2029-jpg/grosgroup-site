@@ -344,6 +344,14 @@ svg{width:1em;height:1em}
 .footer__row a:hover{color:var(--c-ink)}
 .footer__mark{font:800 clamp(2.25rem,12.1vw,17rem)/.8 var(--f-display);letter-spacing:-.03em;text-align:center;white-space:nowrap;height:.62em;margin-top:var(--s-2);user-select:none}
 
+/* ---------- Страница 404 ---------- */
+.nf{padding-block:var(--section)}
+.nf__code{font-size:clamp(6rem,3rem + 18vw,16rem);line-height:.8;color:var(--c-surface-2)}
+.nf__title{margin-top:var(--s-6);font:800 var(--fs-2xl)/1.1 var(--f-display);text-transform:uppercase;letter-spacing:-.02em}
+.nf__text{margin-top:var(--s-5);max-width:46ch;font-size:var(--fs-l);line-height:1.55}
+.nf__text a{white-space:nowrap}
+.nf__cta{margin-top:var(--s-6)}
+
 /* ---------- Появление при загрузке и прокрутке ---------- */
 /* Правила работают только под html.js: без JS или если main.js не стартовал за 4 с, всё видно сразу */
 html.js [data-r]{opacity:0;transform:translateY(28px);transition:opacity var(--t-rev) var(--ease-out),transform var(--t-rev) var(--ease-out);transition-delay:calc(var(--d,0ms) + var(--i,0) * 90ms)}
