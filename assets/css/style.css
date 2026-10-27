@@ -222,6 +222,27 @@ svg{width:1em;height:1em}
 .cases__row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--s-7);align-items:center}
 .cases__title{font:800 var(--fs-2xl)/1 var(--f-display);text-transform:uppercase;letter-spacing:-.02em}
 .cases__text{color:var(--c-muted);max-width:56ch}
+/* Список кейсов: строка = клиент и задача слева, срок справа; включается в index.html по комментарию */
+.cases__list{margin:var(--s-8) 0 0;padding:0;list-style:none}
+.case{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 9rem;gap:var(--s-3) var(--s-7);padding-block:var(--s-6);border-top:1px solid var(--c-line)}
+.case:last-child{border-bottom:1px solid var(--c-line)}
+.case__client{grid-column:1;grid-row:1 / span 2;font-size:var(--fs-s);color:var(--c-muted)}
+.case__title{grid-column:2;font:700 var(--fs-l)/1.25 var(--f-display);letter-spacing:-.01em}
+.case__facts{grid-column:2;display:grid;gap:var(--s-3);margin:0;font-size:var(--fs-s);line-height:1.6}
+.case__facts dt{font-size:var(--fs-xs);color:var(--c-muted)}
+.case__facts dd{margin:0}
+.case__term{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.case__num{font:800 clamp(2.5rem,1.5rem + 3vw,4.5rem)/.9 var(--f-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.case__unit{margin-top:var(--s-2);font-size:var(--fs-s);color:var(--c-muted)}
+@media (max-width:760px){
+  .cases__list{margin-top:var(--s-7)}
+  .case{grid-template-columns:minmax(0,1fr) auto;gap:var(--s-3) var(--s-5)}
+  .case__client{grid-column:1;grid-row:auto}
+  .case__title,.case__facts{grid-column:1 / -1}
+  .case__term{grid-column:2;grid-row:1;flex-direction:row;align-items:baseline;gap:var(--s-2)}
+  .case__num{font-size:var(--fs-2xl)}
+  .case__unit{margin-top:0}
+}
 @media (max-width:860px){
   .cases__row{grid-template-columns:1fr;gap:var(--s-4)}
   .cases__row > :last-child{justify-self:start;margin-top:var(--s-2)}
