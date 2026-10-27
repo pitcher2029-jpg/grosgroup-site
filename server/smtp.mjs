@@ -21,7 +21,19 @@ const addr = (s) => { const m = /<([^>]+)>/.exec(s); return (m ? m[1] : s).trim(
 // Имя файла в параметре (RFC 2231): UTF-8 в процентной записи
 const fileParam = (name) => "UTF-8''" + encodeURIComponent(name).replace(/['()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
-export function buildMessage({ from, to, replyTo, subject, text, attachments = [], date = new Date() }) {
+// Письмо пишется в сокет по частям: вложения читаются из Blob кусками и сразу кодируются в base64,
+// поэтому в памяти нет ни копии файлов, ни письма целиком
+async function writeMessage(socket, { from, to, replyTo, subject, text, attachments = [], date = new Date() }) {
+  // Ждём, пока сокет примет данные; обрыв соединения во время ожидания — ошибка, а не вечное ожидание
+  const put = (s) => new Promise((resolve, reject) => {
+    if (socket.destroyed) return reject(new Error('SMTP: соединение закрыто'));
+    if (socket.write(s)) return resolve();
+    const done = (err) => { socket.off('drain', onDrain); socket.off('close', onClose); err ? reject(err) : resolve(); };
+    const onDrain = () => done();
+    const onClose = () => done(new Error('SMTP: соединение закрыто'));
+    socket.once('drain', onDrain);
+    socket.once('close', onClose);
+  });
   const boundary = 'gg-' + crypto.randomBytes(12).toString('hex');
   const domain = addr(from).split('@')[1] || 'localhost';
   const head = [
@@ -34,17 +46,25 @@ export function buildMessage({ from, to, replyTo, subject, text, attachments = [
     'MIME-Version: 1.0',
     'Content-Type: multipart/mixed; boundary="' + boundary + '"',
   ].filter(Boolean);
-  const parts = [
-    ['Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '', b64lines(Buffer.from(text))].join('\r\n'),
-    ...attachments.map((a) => [
-      'Content-Type: application/octet-stream; name*=' + fileParam(a.name),
-      'Content-Transfer-Encoding: base64',
-      'Content-Disposition: attachment; filename*=' + fileParam(a.name),
-      '',
-      b64lines(Buffer.from(a.data)),
-    ].join('\r\n')),
-  ];
-  return head.join('\r\n') + '\r\n\r\n' + parts.map((p) => '--' + boundary + '\r\n' + p).join('\r\n') + '\r\n--' + boundary + '--\r\n';
+  // Точка в начале строки удваивается (в base64 и границах частей её не бывает)
+  await put((head.join('\r\n') + '\r\n\r\n--' + boundary + '\r\n'
+    + 'Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'
+    + b64lines(Buffer.from(text))).replace(/^\./gm, '..'));
+  for (const a of attachments) {
+    await put('--' + boundary + '\r\n'
+      + 'Content-Type: application/octet-stream; name*=' + fileParam(a.name) + '\r\n'
+      + 'Content-Transfer-Encoding: base64\r\n'
+      + 'Content-Disposition: attachment; filename*=' + fileParam(a.name) + '\r\n\r\n');
+    let rest = Buffer.alloc(0);
+    for await (const chunk of a.blob.stream()) {
+      const buf = rest.length ? Buffer.concat([rest, chunk]) : Buffer.from(chunk);
+      const cut = buf.length - (buf.length % 57); // 57 байт = строка base64 из 76 знаков
+      if (cut) await put(b64lines(buf.subarray(0, cut)));
+      rest = buf.subarray(cut);
+    }
+    if (rest.length) await put(b64lines(rest));
+  }
+  await put('--' + boundary + '--\r\n');
 }
 
 // Чтение ответов сервера: многострочный ответ заканчивается строкой «код пробел текст»
@@ -119,7 +139,7 @@ const connect = (fn, timeoutMs) => new Promise((resolve, reject) => {
  */
 export async function sendMail({
   host, port = 465, secure = Number(port) === 465, requireTLS = true, user, pass,
-  from, to, replyTo, subject, text, attachments = [], timeoutMs = 20000, tlsOptions = {}, ehloName = 'grosgroup-lead',
+  from, to, replyTo, subject, text, attachments = [], timeoutMs = 20000, deadlineMs = 60000, tlsOptions = {}, ehloName = 'grosgroup-lead',
 }) {
   const recipients = (Array.isArray(to) ? to : String(to).split(',')).map((x) => x.trim()).filter(Boolean);
   if (!host || !from || !recipients.length) throw new Error('SMTP: не заданы сервер, отправитель или получатели');
@@ -127,6 +147,8 @@ export async function sendMail({
     ? tls.connect({ host, port: Number(port), servername: host, ...tlsOptions })
     : net.connect({ host, port: Number(port) })), timeoutMs);
   const c = new Conn(raw, timeoutMs);
+  // Общий срок на всё письмо: медленный сервер не держит заявку дольше deadlineMs
+  const deadline = setTimeout(() => c.socket.destroy(new Error('SMTP: превышен общий срок отправки')), deadlineMs);
   try {
     await c.cmd(null, [220], 'приветствие');
     let ehlo = await c.cmd('EHLO ' + ehloName, [250]);
@@ -145,11 +167,13 @@ export async function sendMail({
     await c.cmd(`MAIL FROM:<${addr(from)}>`, [250]);
     for (const r of recipients) await c.cmd(`RCPT TO:<${addr(r)}>`, [250, 251]);
     await c.cmd('DATA', [354]);
-    const msg = buildMessage({ from, to: recipients, replyTo, subject, text, attachments });
-    // Точка в начале строки удваивается, письмо заканчивается строкой из одной точки
-    await c.cmd(msg.replace(/^\./gm, '..') + '.', [250], 'DATA');
+    await writeMessage(c.socket, { from, to: recipients, replyTo, subject, text, attachments });
+    if (c.closed) throw c.closed;
+    // Письмо заканчивается строкой из одной точки
+    await c.cmd('.', [250], 'DATA');
     await c.cmd('QUIT', [221]).catch(() => {});
   } finally {
+    clearTimeout(deadline);
     c.socket.end();
   }
 }

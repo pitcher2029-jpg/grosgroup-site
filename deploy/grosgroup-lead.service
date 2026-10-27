@@ -21,8 +21,10 @@ UMask=0077
 Restart=on-failure
 RestartSec=5
 
-# Заявка с 5 файлами по 10 МБ разбирается в памяти
-MemoryMax=384M
+# Замер: 1 заявка с 5 файлами по 10 МБ — 323 МБ, 3 одновременно (MAX_CONCURRENT=2) — 438 МБ.
+# MemoryHigh притормаживает процесс раньше, чем MemoryMax его остановит. Сервер — от 1 ГБ памяти.
+MemoryHigh=512M
+MemoryMax=640M
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

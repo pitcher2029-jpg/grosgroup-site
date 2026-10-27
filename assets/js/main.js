@@ -208,8 +208,9 @@
   const f = {
     name: $('#f-name'), phone: $('#f-phone'), email: $('#f-email'), desc: $('#f-desc'), files: $('#f-files'), consent: $('#f-consent'),
   };
-  // Метка загрузки страницы: сервер отсеет заявки, отправленные быстрее, чем человек успел бы заполнить форму
-  $('#f-ts').value = String(Date.now());
+  // Сколько страница была открыта до отправки: заявку быстрее 3 с сервер пометит «проверить».
+  // Считается по performance.now(), поэтому неверные часы компьютера не мешают
+  const elapsed = $('#f-elapsed');
   const trap = $('#f-website');
   const fileList = $('#file-list');
   const errorBox = $('#form-error');
@@ -388,6 +389,7 @@
     // Заполненная ловушка — бот: показываем успех, ничего не отправляя
     if (trap.value) { setDone(true); return; }
 
+    elapsed.value = String(Math.round(performance.now()));
     const data = new FormData(form);
     data.delete('files');
     files.forEach((file) => data.append('files', file, file.name));

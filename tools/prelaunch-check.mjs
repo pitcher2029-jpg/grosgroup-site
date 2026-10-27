@@ -70,6 +70,13 @@ for (const f of ['deploy/nginx.conf', 'deploy/apache.htaccess']) {
   const missing = inline.filter((h) => !conf.includes(h));
   if (missing.length) block(`${f}: в CSP нет хэша встроенного скрипта ${missing.join(' ')} — скрипт в <head> менялся`);
   else ok.push(`${f}: хэш CSP совпадает`);
+  // Обработчик заявок на другом адресе: браузер пустит запрос, только если его источник есть в connect-src
+  const ep = cfg('endpoint') || '';
+  if (/^https?:\/\//i.test(ep)) {
+    const origin = new URL(ep).origin;
+    const connect = /connect-src([^;"]*)/.exec(conf)?.[1].trim().split(/\s+/) || [];
+    if (!connect.includes(origin) && !(canonical && new URL(canonical).origin === origin)) block(`${f}: CONFIG.endpoint ведёт на ${origin}, а в connect-src его нет — браузер заблокирует отправку формы`);
+  }
 }
 
 // 6. Файлы, на которые ссылается разметка

@@ -72,5 +72,11 @@ test('prelaunch-check: блокеры в прототипе; после запо
   const csp = run('prelaunch-check.mjs', '--root', dir);
   assert.equal(csp.status, 1);
   assert.match(csp.stdout, /deploy\/nginx\.conf: в CSP нет хэша/);
+
+  // Обработчик на чужом адресе без строки в connect-src — блокер
+  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '/api/lead',", "endpoint: 'https://api.example.ru/lead',"));
+  const ext = run('prelaunch-check.mjs', '--report', '--root', dir);
+  assert.match(ext.stdout, /deploy\/nginx\.conf: CONFIG\.endpoint ведёт на https:\/\/api\.example\.ru/);
+  assert.match(ext.stdout, /deploy\/apache\.htaccess: CONFIG\.endpoint ведёт на/);
   await rm(dir, { recursive: true });
 });

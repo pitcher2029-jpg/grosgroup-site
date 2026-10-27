@@ -6,7 +6,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, readdir } from 'node:fs/promises';
-import { createLeadHandler, LIMITS, safeName } from '../lead.mjs';
+import { createLeadHandler, LIMITS, safeName, purgeStore } from '../lead.mjs';
 import { createServer } from '../http.mjs';
 import { encodeHeader } from '../smtp.mjs';
 
@@ -14,7 +14,7 @@ const T0 = Date.parse('2026-10-27T10:00:00Z');
 const quiet = { error() {}, log() {} };
 const form = (over = {}, files = []) => {
   const fd = new FormData();
-  const base = { name: 'Иван Петров', phone: '+7 (961) 125-55-50', email: 'ivan@example.ru', description: 'Свёрла 8 мм, 100 шт.', consent: 'yes', website: '', ts: String(T0 - 60000) };
+  const base = { name: 'Иван Петров', phone: '+7 (961) 125-55-50', email: 'ivan@example.ru', description: 'Свёрла 8 мм, 100 шт.', consent: 'yes', website: '', elapsed: '60000' };
   for (const [k, v] of Object.entries({ ...base, ...over })) if (v !== null) fd.append(k, v);
   for (const f of files) fd.append('files', new Blob([f.data]), f.name);
   return fd;
@@ -101,24 +101,68 @@ test('файлы: не больше 5, белый список расширен�
   assert.equal(safeName('C:\\docs\\смета "1".xlsx'), 'смета _1_.xlsx');
 });
 
-test('антиспам: ловушка и слишком быстрая отправка — 200 без доставки', async () => {
-  let sent = 0;
-  const h = createLeadHandler({ WEBHOOK_URL: 'http://x' }, { now: () => T0, log: quiet, fetchImpl: async () => { sent++; return new Response(''); } });
+test('антиспам: ловушка — 200 без доставки; быстрая отправка доставляется с пометкой', async () => {
+  const hooks = [];
+  const h = createLeadHandler({ WEBHOOK_URL: 'http://x' }, { now: () => T0, log: quiet, fetchImpl: async (u, init) => { hooks.push(JSON.parse(init.body)); return new Response(''); } });
   assert.equal((await h(req(form({ website: 'http://spam' })), { ip: '1' })).status, 200);
-  assert.equal((await h(req(form({ ts: String(T0 - 1000) })), { ip: '2' })).status, 200);
-  assert.equal(sent, 0);
-  assert.equal((await h(req(form({ ts: null })), { ip: '3' })).status, 200);
-  assert.equal(sent, 1, 'без метки времени заявка принимается (страница из старого кэша)');
+  assert.equal(hooks.length, 0, 'ловушка: ничего не доставлено');
+  assert.equal((await h(req(form({ elapsed: '1500' })), { ip: '2' })).status, 200);
+  assert.equal(hooks.length, 1, 'быстрая отправка не теряется');
+  assert.match(hooks[0].suspect, /через 1\.5 с/);
+  assert.equal((await h(req(form({ elapsed: null })), { ip: '3' })).status, 200);
+  assert.equal(hooks[1].suspect, undefined, 'без поля elapsed пометки нет');
+});
+
+test('имя файла: длинное укорачивается с сохранением расширения и принимается', async () => {
+  const long = 'Техническое задание '.repeat(6) + '.pdf';
+  assert.ok(long.length > 120);
+  assert.equal(safeName(long).length, 120);
+  assert.ok(safeName(long).endsWith('.pdf'));
+  const h = createLeadHandler({ WEBHOOK_URL: 'http://x' }, { now: () => T0, log: quiet, fetchImpl: async () => new Response('') });
+  assert.equal((await h(req(form({}, [{ name: long, data: 'x' }])), { ip: '1' })).status, 200);
+});
+
+test('медленный канал не задерживает ответ дольше тайм-аута', async () => {
+  const hang = http.createServer(() => {});
+  const port = await listen(hang);
+  const errors = [];
+  const env = { WEBHOOK_URL: `http://127.0.0.1:${port}/hook`, CHANNEL_TIMEOUT_MS: '300' };
+  const h = createLeadHandler(env, { now: () => T0, log: { error: (...a) => errors.push(a.join(' ')) } });
+  const t = Date.now();
+  const r = await h(req(form()), { ip: '1' });
+  assert.equal(r.status, 502);
+  assert.ok(Date.now() - t < 3000, 'ответ без ожидания зависшего вебхука');
+  assert.ok(errors.some((e) => /вебхук/.test(e)));
+  hang.closeAllConnections();
+  hang.close();
+});
+
+test('очистка резервной копии: заявки старше срока удаляются, свежие остаются', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'gg-purge-'));
+  let t = Date.parse('2025-01-10T10:00:00Z');
+  const h = createLeadHandler({ LEAD_STORE_DIR: dir, WEBHOOK_URL: 'http://x' }, { now: () => t, log: quiet, fetchImpl: async () => new Response('') });
+  await h(req(form({}, [{ name: 'old.pdf', data: 'A' }])), { ip: '1' });
+  t = Date.parse('2026-02-20T10:00:00Z');
+  await h(req(form({}, [{ name: 'new.pdf', data: 'B' }])), { ip: '1' });
+  assert.equal((await readdir(path.join(dir, 'files'))).length, 2);
+  const removed = await purgeStore(dir, 395, Date.parse('2026-02-21T00:00:00Z'));
+  assert.equal(removed, 2, 'каталог и строка старой заявки');
+  const left = await readdir(path.join(dir, 'files'));
+  assert.deepEqual(left.map((x) => x.slice(0, 8)), ['20260220']);
+  const lines = (await readFile(path.join(dir, 'leads.jsonl'), 'utf8')).trim().split('\n');
+  assert.equal(lines.length, 1);
+  assert.equal(JSON.parse(lines[0]).id.slice(0, 8), '20260220');
+  assert.equal(await purgeStore(dir, 395, Date.parse('2026-02-21T00:00:00Z')), 0, 'повторно удалять нечего');
 });
 
 test('ограничение частоты: девятый запрос с одного IP за 10 минут — 429', async () => {
   let t = T0;
   const h = createLeadHandler({ WEBHOOK_URL: 'http://x' }, { now: () => t, log: quiet, fetchImpl: async () => new Response('') });
-  for (let i = 0; i < LIMITS.rateCount; i++) assert.equal((await h(req(form({ ts: String(t - 60000) })), { ip: '9.9.9.9' })).status, 200);
+  for (let i = 0; i < LIMITS.rateCount; i++) assert.equal((await h(req(form()), { ip: '9.9.9.9' })).status, 200);
   assert.equal((await h(req(form()), { ip: '9.9.9.9' })).status, 429);
   assert.equal((await h(req(form()), { ip: '8.8.8.8' })).status, 200, 'другой IP не затронут');
   t += LIMITS.rateWindowMs + 1;
-  assert.equal((await h(req(form({ ts: String(t - 60000) })), { ip: '9.9.9.9' })).status, 200, 'после окна снова можно');
+  assert.equal((await h(req(form()), { ip: '9.9.9.9' })).status, 200, 'после окна снова можно');
 });
 
 test('почта: AUTH, получатели, тема и вложение в письме', async () => {
@@ -202,6 +246,47 @@ test('HTTP: заявка проходит, чужой путь — 404, GET — 
   const big = await fetch(base + '/api/lead', { method: 'POST', body: new Uint8Array(LIMITS.maxBody + 10), headers: { 'content-type': 'multipart/form-data; boundary=x' } }).catch((e) => e);
   assert.ok(big instanceof Error || big.status === 413, 'большое тело отклонено');
   srv.close();
+});
+
+test('HTTP: кривой адрес — 400, очередь переполнена — 503 busy', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const fetchImpl = async () => { await gate; return new Response(''); };
+  const srv = createServer({ WEBHOOK_URL: 'http://crm', MAX_CONCURRENT: '1', MAX_QUEUE: '0' }, { now: () => T0, fetchImpl, log: quiet });
+  const port = await listen(srv);
+  const base = `http://127.0.0.1:${port}`;
+  const raw = await new Promise((resolve) => {
+    const s = net.connect(port, '127.0.0.1', () => s.write('POST //[ HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n'));
+    let out = '';
+    s.on('data', (d) => { out += d; });
+    s.on('close', () => resolve(out));
+  });
+  assert.match(raw, /^HTTP\/1\.1 400/);
+  const first = fetch(base + '/api/lead', { method: 'POST', body: form() });
+  await new Promise((r) => setTimeout(r, 100));
+  const second = await fetch(base + '/api/lead', { method: 'POST', body: form() });
+  assert.equal(second.status, 503);
+  assert.equal(second.headers.get('retry-after'), '30');
+  release();
+  assert.equal((await first).status, 200);
+  assert.equal((await fetch(base + '/api/lead', { method: 'POST', body: form() })).status, 200, 'место освободилось');
+  srv.close();
+});
+
+test('почта: двоичное вложение передаётся по частям без искажений; пометка «проверить»', async () => {
+  const { srv, got } = fakeSmtp();
+  const port = await listen(srv);
+  const env = { SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_SECURE: '0', MAIL_FROM: 'u@x.ru', MAIL_TO: 'a@x.ru' };
+  const bin = new Uint8Array(300001).map((_, i) => (i * 7919 + (i >> 8)) & 255);
+  const fd = form({ elapsed: '800' });
+  fd.append('files', new Blob([bin]), 'draw.dwg');
+  const h = createLeadHandler(env, { now: () => T0, log: quiet });
+  assert.equal((await h(req(fd), { ip: '1' })).status, 200);
+  srv.close();
+  assert.ok(got.data.includes('Subject: ' + encodeHeader('[проверить] Заявка с сайта: Иван Петров, +7 (961) 125-55-50')));
+  const part = got.data.split("filename*=UTF-8''draw.dwg\r\n\r\n")[1].split('\r\n--')[0];
+  assert.ok(part.split('\r\n').every((l) => l.length <= 76), 'строки base64 не длиннее 76');
+  assert.ok(Buffer.from(part.replace(/\r\n/g, ''), 'base64').equals(Buffer.from(bin)));
 });
 
 test('заголовок письма: длинная кириллица режется на слова не длиннее 75 символов', () => {
