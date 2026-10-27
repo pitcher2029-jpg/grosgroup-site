@@ -1,0 +1,46 @@
+# GROSGROUP — Apache (виртуальный хостинг). Скопировать в корень сайта под именем .htaccess.
+# На виртуальном хостинге Node.js обычно недоступен: обработчик заявок тогда работает на отдельном VPS,
+# в assets/js/main.js CONFIG.endpoint — полный адрес обработчика, а в его окружении ALLOW_ORIGIN=https://grosgroup.ru;
+# адрес обработчика добавить в connect-src ниже.
+# Нужны модули mod_rewrite, mod_headers, mod_expires (у большинства хостингов включены).
+
+Options -Indexes
+AddDefaultCharset utf-8
+ErrorDocument 404 /404.html
+
+RewriteEngine On
+# HTTPS и адрес без www
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP_HOST} ^www\. [NC]
+RewriteRule ^ https://grosgroup.ru%{REQUEST_URI} [R=301,L]
+# Служебные файлы репозитория и прототип ROY наружу не отдаются
+RewriteRule ^(server|deploy|tools|roy|\.git)(/|$) - [R=404,L]
+RewriteRule \.(md|mjs|env|example|service|conf)$ - [R=404,L]
+
+<IfModule mod_headers.c>
+  # CSP: хэш — встроенный скрипт в <head> index.html; сверяет tools/prelaunch-check.mjs
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-faCN5M9dKGUp3TQbuqgmNzfvtiXPbHanrYRpjrX4Qzw=' https://mc.yandex.ru https://yastatic.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://mc.yandex.ru https://mc.yandex.com; font-src 'self'; connect-src 'self' https://mc.yandex.ru https://mc.yandex.com; child-src blob: https://mc.yandex.ru; frame-src blob: https://mc.yandex.ru; form-action 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType text/javascript "access plus 7 days"
+  ExpiresByType image/webp "access plus 7 days"
+  ExpiresByType image/jpeg "access plus 7 days"
+  ExpiresByType image/png "access plus 7 days"
+  ExpiresByType image/svg+xml "access plus 7 days"
+  ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript image/svg+xml application/xml text/plain
+</IfModule>

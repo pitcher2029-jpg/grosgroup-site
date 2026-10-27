@@ -1,0 +1,41 @@
+# Служба обработчика заявок. Установка:
+#   install -d /opt/grosgroup-lead && cp -r server/*.mjs /opt/grosgroup-lead/
+#   install -m 600 deploy/grosgroup-lead.env.example /etc/grosgroup-lead.env   # и заполнить
+#   cp deploy/grosgroup-lead.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now grosgroup-lead
+# Журнал: journalctl -u grosgroup-lead; резервные копии заявок: /var/lib/grosgroup-lead
+[Unit]
+Description=GROSGROUP: приём заявок с сайта
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/grosgroup-lead/http.mjs
+WorkingDirectory=/opt/grosgroup-lead
+EnvironmentFile=/etc/grosgroup-lead.env
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=8787 TRUST_PROXY=1 LEAD_STORE_DIR=/var/lib/grosgroup-lead
+DynamicUser=yes
+StateDirectory=grosgroup-lead
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+
+# Заявка с 5 файлами по 10 МБ разбирается в памяти
+MemoryMax=384M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
