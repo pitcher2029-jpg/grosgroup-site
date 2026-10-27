@@ -308,7 +308,20 @@
       return;
     }
     const res = await fetch(CONFIG.endpoint, { method: 'POST', body: data });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) {
+      const err = new Error('HTTP ' + res.status);
+      err.status = res.status;
+      err.body = await res.json().catch(() => null);
+      throw err;
+    }
+  };
+  // Текст ошибки по ответу сервера (server/lead.mjs)
+  const failText = (err) => {
+    const fields = err.body && err.body.fields;
+    if (err.status === 429) return 'Слишком много заявок подряд. Подождите 10 минут или позвоните: +7 (961) 125-55-50.';
+    if (err.status === 413) return 'Файлы слишком большие: не больше 5 файлов по 10 МБ.';
+    if (err.status === 400 && fields) return Object.values(fields).join('. ') + '.';
+    return 'Не удалось отправить заявку. Проверьте связь и повторите или позвоните: +7 (961) 125-55-50.';
   };
 
   // Экран успеха перекрывает форму: поля под ним выключены из обхода с клавиатуры
@@ -339,7 +352,7 @@
       await send(data);
       setDone(true);
     } catch (err) {
-      errorBox.textContent = 'Не удалось отправить заявку. Проверьте связь и повторите или позвоните: +7 (961) 125-55-50.';
+      errorBox.textContent = failText(err);
       errorBox.hidden = false;
     } finally {
       submitBtn.removeAttribute('aria-busy');
