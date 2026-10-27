@@ -3,6 +3,10 @@
 Статический прототип сайта GROSGROUP (поставки инструмента, расходников и оборудования для производств).
 HTML/CSS/JS без сборки: откройте `index.html` или любой статический сервер.
 
+## Варианты для сравнения
+- Текущая редакция: https://pitcher2029-jpg.github.io/grosgroup-site/
+- Прототип от ROY (редизайн, один самодостаточный файл): https://pitcher2029-jpg.github.io/grosgroup-site/roy/ — `roy/index.html`
+
 ## Структура
 - `index.html` — разметка страницы
 - `assets/css/style.css` — стили и токены дизайна (CSS custom properties)
