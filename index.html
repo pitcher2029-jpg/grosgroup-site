@@ -15,7 +15,11 @@
   <link rel="preload" href="assets/fonts/unbounded-cyrillic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/unbounded-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/css/style.css">
-  <script>document.documentElement.classList.add('js')</script>
+  <script>
+    // Анимации появления включаются только при рабочем JS; если main.js не стартовал за 4 с — контент показывается без них
+    document.documentElement.classList.add('js');
+    setTimeout(function () { if (!document.documentElement.classList.contains('r-ok')) document.documentElement.classList.remove('js'); }, 4000);
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к содержанию</a>
@@ -53,33 +57,31 @@
   <main id="main">
     <!-- 1. Hero -->
     <section class="hero" aria-labelledby="hero-title">
-      <h1 class="hero__title display" id="hero-title">
-        <span class="hero__word">Поставки</span> <span class="hero__word">для</span> <span class="hero__word">производств</span>
-      </h1>
+      <h1 class="hero__title display" id="hero-title" data-r="split" style="--d:150ms">Поставки для производств</h1>
       <div class="container hero__grid">
         <div class="hero__copy">
-          <p class="hero__lead">Обеспечение вашего производства без&nbsp;1000&nbsp;звонков</p>
-          <p class="hero__text">Поставка инструмента, расходных материалов и&nbsp;оборудования до&nbsp;вашего предприятия</p>
-          <div class="hero__actions">
+          <p class="hero__lead" data-r style="--d:550ms">Обеспечение вашего производства без&nbsp;1000&nbsp;звонков</p>
+          <p class="hero__text" data-r style="--d:650ms">Поставка инструмента, расходных материалов и&nbsp;оборудования до&nbsp;вашего предприятия</p>
+          <div class="hero__actions" data-r style="--d:750ms">
             <a class="btn btn--dark" href="#contacts">Связаться с нами<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a>
             <a class="btn btn--dark" href="#supply">Все услуги<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a>
           </div>
         </div>
-        <figure class="hero__media">
+        <figure class="hero__media shutter" data-r style="--d:350ms">
           <img src="assets/img/hero.webp" width="1350" height="830" alt="Коробки GROSGROUP, фрезерный станок, ключи, свёрла, подшипники, шестерни, твердосплавные пластины и смазка" fetchpriority="high">
         </figure>
       </div>
     </section>
 
     <!-- 2. О компании -->
-    <section class="about" aria-labelledby="about-title">
+    <section class="about sec--shade" aria-labelledby="about-title">
       <div class="container">
-        <div class="about__band">
+        <div class="about__band" data-r>
           <div class="about__head">
-            <p class="eyebrow eyebrow--light">о компании</p>
-            <h2 class="about__title" id="about-title">Надёжный поставщик в&nbsp;сфере закупок</h2>
+            <p class="eyebrow eyebrow--light" data-r="fade" style="--d:200ms">о компании</p>
+            <h2 class="about__title" id="about-title" data-r="split" style="--d:250ms">Надёжный поставщик в&nbsp;сфере закупок</h2>
           </div>
-          <p class="about__text">Мы берём весь путь закупки — от&nbsp;подбора до&nbsp;доставки на&nbsp;склад заказчика. Работаем прозрачно, точно в&nbsp;срок и&nbsp;с&nbsp;ответственностью за&nbsp;результат.</p>
+          <p class="about__text" data-r style="--d:400ms">Мы берём весь путь закупки — от&nbsp;подбора до&nbsp;доставки на&nbsp;склад заказчика. Работаем прозрачно, точно в&nbsp;срок и&nbsp;с&nbsp;ответственностью за&nbsp;результат.</p>
           <a class="btn btn--light about__cta" href="#contacts">Связаться с нами<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a>
         </div>
       </div>
@@ -88,30 +90,30 @@
     <!-- 3. Мы поставляем -->
     <section class="supply" id="supply" aria-labelledby="supply-title">
       <div class="container">
-        <h2 class="section-title" id="supply-title">Мы поставляем</h2>
-        <ul class="cats">
-          <li>
+        <h2 class="section-title" id="supply-title" data-r="split">Мы поставляем</h2>
+        <ul class="cats" data-stagger>
+          <li data-r>
             <a class="cat" href="#contacts" data-topic="Расходники">
               <h3 class="cat__title">Расходники</h3>
               <img class="cat__img" src="assets/img/cat-consumables.webp" width="1088" height="816" loading="lazy" alt="Отрезные и лепестковые круги, проволока, щётка, твердосплавные пластины">
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
-          <li>
+          <li data-r>
             <a class="cat" href="#contacts" data-topic="Оборудование">
               <h3 class="cat__title">Оборудование</h3>
               <img class="cat__img" src="assets/img/cat-equipment.webp" width="1088" height="816" loading="lazy" alt="Настольный фрезерный станок с ЧПУ">
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
-          <li>
+          <li data-r>
             <a class="cat" href="#contacts" data-topic="Инструмент">
               <h3 class="cat__title">Инструмент</h3>
               <img class="cat__img" src="assets/img/cat-tools.webp" width="1088" height="816" loading="lazy" alt="Динамометрический ключ, штангенциркуль, рожково-накидные ключи, трещотка, шестигранники">
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
-          <li>
+          <li data-r>
             <a class="cat" href="#contacts" data-topic="Оснастка">
               <h3 class="cat__title">Оснастка</h3>
               <img class="cat__img" src="assets/img/cat-tooling.webp" width="1088" height="816" loading="lazy" alt="Станочные тиски, прихваты, установочные блоки, патроны и цанги">
@@ -119,26 +121,31 @@
             </a>
           </li>
         </ul>
+      </div>
+    </section>
 
-        <h2 class="section-title section-title--center" id="benefits-title">Закупки для производства — без лишней суеты</h2>
-        <ul class="benefits" aria-labelledby="benefits-title">
-          <li class="benefit">
-            <img class="benefit__icon" src="assets/img/icon-all-in-one.webp" width="320" height="320" loading="lazy" alt="">
+    <!-- 3б. Выгоды -->
+    <section class="perks sec--shade" aria-labelledby="benefits-title">
+      <div class="container">
+        <h2 class="section-title section-title--center" id="benefits-title" data-r="split">Закупки для производства — без лишней суеты</h2>
+        <ul class="benefits" aria-labelledby="benefits-title" data-stagger>
+          <li class="benefit" data-r>
+            <span class="benefit__plate"><img class="benefit__icon" src="assets/img/icon-all-in-one.webp" width="320" height="320" loading="lazy" alt=""></span>
             <h3 class="benefit__title">Всё в&nbsp;одном месте</h3>
             <p class="benefit__text">Не нужно обзванивать нескольких поставщиков. У&nbsp;нас можно заказать инструмент, оборудование, оснастку и&nbsp;расходные материалы в&nbsp;одном месте.</p>
           </li>
-          <li class="benefit">
-            <img class="benefit__icon" src="assets/img/icon-selection.webp" width="320" height="320" loading="lazy" alt="">
+          <li class="benefit" data-r>
+            <span class="benefit__plate"><img class="benefit__icon" src="assets/img/icon-selection.webp" width="320" height="320" loading="lazy" alt=""></span>
             <h3 class="benefit__title">Подбор под задачу</h3>
             <p class="benefit__text">Уточним потребности вашего производства и&nbsp;предложим подходящие позиции. Не&nbsp;предлагаем первое попавшееся — подберём под задачу и&nbsp;условия работы.</p>
           </li>
-          <li class="benefit">
-            <img class="benefit__icon" src="assets/img/icon-delivery.webp" width="364" height="320" loading="lazy" alt="">
+          <li class="benefit" data-r>
+            <span class="benefit__plate"><img class="benefit__icon" src="assets/img/icon-delivery.webp" width="364" height="320" loading="lazy" alt=""></span>
             <h3 class="benefit__title">Доставка включена</h3>
             <p class="benefit__text">Найдём транспорт, организуем погрузку и&nbsp;привезём заказ. Вам останется принять груз на&nbsp;вашем объекте.</p>
           </li>
-          <li class="benefit">
-            <img class="benefit__icon" src="assets/img/icon-documents.webp" width="320" height="320" loading="lazy" alt="">
+          <li class="benefit" data-r>
+            <span class="benefit__plate"><img class="benefit__icon" src="assets/img/icon-documents.webp" width="320" height="320" loading="lazy" alt=""></span>
             <h3 class="benefit__title">Документы</h3>
             <p class="benefit__text">Один комплект документов. Оформим всё для юридического лица и&nbsp;избавим вас от&nbsp;лишней бумажной волокиты.</p>
           </li>
@@ -149,23 +156,23 @@
     <!-- 4. Кейсы: в макетах раздела нет, пункт меню есть -->
     <section class="cases" id="cases" aria-labelledby="cases-title">
       <div class="container cases__row">
-        <h2 class="cases__title" id="cases-title">Кейсы</h2>
-        <p class="cases__text">Готовим подборку реальных поставок: что искали, что привезли и&nbsp;за&nbsp;какой срок. Пока раздел наполняется — расскажите о&nbsp;своей задаче.</p>
-        <a class="btn btn--dark" href="#contacts">Обсудить закупку<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a>
+        <h2 class="cases__title" id="cases-title" data-r="split">Кейсы</h2>
+        <p class="cases__text" data-r style="--d:150ms">Готовим подборку реальных поставок: что искали, что привезли и&nbsp;за&nbsp;какой срок. Пока раздел наполняется — расскажите о&nbsp;своей задаче.</p>
+        <div data-r style="--d:250ms"><a class="btn btn--dark" href="#contacts">Обсудить закупку<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a></div>
       </div>
     </section>
 
     <!-- 5. Китай -->
-    <section class="china" aria-labelledby="china-title">
+    <section class="china sec--shade" aria-labelledby="china-title">
       <div class="container">
-        <h2 class="display section-display" id="china-title">Скоро поставки из Китая</h2>
+        <h2 class="display section-display" id="china-title" data-r="split">Скоро поставки из Китая</h2>
         <div class="split">
-          <div class="split__copy">
-            <p class="split__lead">Расширяем возможности снабжения</p>
-            <p class="split__text">Готовим проект, который поможет находить и&nbsp;привозить товары для вашего предприятия.</p>
-            <p class="split__text">Мы развиваем торговые маршруты между Китаем и&nbsp;Россией. Новое направление расширит возможности GROSGROUP по&nbsp;снабжению предприятий.</p>
+          <div class="split__copy" data-stagger>
+            <p class="split__lead" data-r>Расширяем возможности снабжения</p>
+            <p class="split__text" data-r>Готовим проект, который поможет находить и&nbsp;привозить товары для вашего предприятия.</p>
+            <p class="split__text" data-r>Мы развиваем торговые маршруты между Китаем и&nbsp;Россией. Новое направление расширит возможности GROSGROUP по&nbsp;снабжению предприятий.</p>
           </div>
-          <figure class="split__media split__media--china">
+          <figure class="split__media split__media--china plate shutter" data-r style="--d:150ms">
             <img src="assets/img/container-china.webp" width="1400" height="831" loading="lazy" alt="Красный морской контейнер GROSGROUP с флагом Китая">
           </figure>
         </div>
@@ -175,17 +182,17 @@
     <!-- 6. Вентиляция -->
     <section class="vent" id="ventilation" aria-labelledby="vent-title">
       <div class="container">
-        <h2 class="display section-display section-display--vent" id="vent-title">Ещё один наш проект<br class="br-wide"> GROSGROUP&nbsp;— промышленная<br class="br-wide"> вентиляция и&nbsp;аспирация</h2>
+        <h2 class="display section-display section-display--vent" id="vent-title" data-r="split">Ещё один наш проект<br class="br-wide"> GROSGROUP&nbsp;— промышленная<br class="br-wide"> вентиляция и&nbsp;аспирация</h2>
         <div class="split split--vent">
-          <div class="split__copy">
-            <p class="split__lead">Проектируем и&nbsp;монтируем вентиляцию и&nbsp;аспирацию для предприятий</p>
-            <p class="split__text">Это отдельное направление GROSGROUP, посвящённое проектированию, подбору оборудования и&nbsp;монтажу систем вентиляции и&nbsp;аспирации. Решения разрабатываем с&nbsp;учётом задач и&nbsp;особенностей каждого производства.</p>
+          <div class="split__copy" data-stagger>
+            <p class="split__lead" data-r>Проектируем и&nbsp;монтируем вентиляцию и&nbsp;аспирацию для предприятий</p>
+            <p class="split__text" data-r>Это отдельное направление GROSGROUP, посвящённое проектированию, подбору оборудования и&nbsp;монтажу систем вентиляции и&nbsp;аспирации. Решения разрабатываем с&nbsp;учётом задач и&nbsp;особенностей каждого производства.</p>
           </div>
-          <figure class="split__media split__media--vent">
+          <figure class="split__media split__media--vent shutter" data-r style="--d:150ms">
             <img src="assets/img/ventilation.webp" width="912" height="886" loading="lazy" alt="Приточная установка, пылеуловитель, радиальный вентилятор, воздуховоды, чертежи и каска">
           </figure>
         </div>
-        <div class="vent__action">
+        <div class="vent__action" data-r>
           <!-- TODO: адрес сайта проекта вентиляции от заказчика -->
           <a class="btn btn--dark btn--xl" href="#" data-todo="vent-url">Перейти на сайт проекта<span class="btn__icon"><svg><use href="#i-arrow"/></svg></span></a>
         </div>
@@ -193,23 +200,23 @@
     </section>
 
     <!-- 7. Контакты и форма -->
-    <section class="contacts" id="contacts" aria-labelledby="contacts-title">
+    <section class="contacts sec--shade" id="contacts" aria-labelledby="contacts-title">
       <div class="container">
-        <h2 class="display section-display section-display--center" id="contacts-title">Свяжитесь с нами</h2>
+        <h2 class="display section-display section-display--center" id="contacts-title" data-r="split">Свяжитесь с нами</h2>
         <div class="contacts__grid">
-          <figure class="contacts__media">
+          <figure class="contacts__media plate shutter" data-r style="--d:150ms">
             <img src="assets/img/contact-door.webp" width="609" height="991" loading="lazy" alt="Дверь морского контейнера с телефонной трубкой">
           </figure>
 
           <div class="contacts__body">
-            <dl class="contacts__list">
-              <div><dt>Адрес:</dt><dd>г.&nbsp;Калуга, ул.&nbsp;Глаголева,&nbsp;3, ТРЦ «Московский», 5&nbsp;этаж, кабинет&nbsp;521</dd></div>
-              <div><dt>Телефон:</dt><dd><a href="tel:+79611255550">+7 (961) 125-55-50</a></dd></div>
-              <div><dt>Почта:</dt><dd><a href="mailto:info@grosgroup.ru">info@grosgroup.ru</a></dd></div>
-              <div><dt>График работы:</dt><dd>Пн–Пт: 9:00–18:00</dd></div>
+            <dl class="contacts__list" data-stagger>
+              <div data-r><dt>Адрес:</dt><dd>г.&nbsp;Калуга, ул.&nbsp;Глаголева,&nbsp;3, ТРЦ «Московский», 5&nbsp;этаж, кабинет&nbsp;521</dd></div>
+              <div data-r><dt>Телефон:</dt><dd><a href="tel:+79611255550">+7 (961) 125-55-50</a></dd></div>
+              <div data-r><dt>Почта:</dt><dd><a href="mailto:info@grosgroup.ru">info@grosgroup.ru</a></dd></div>
+              <div data-r><dt>График работы:</dt><dd>Пн–Пт: 9:00–18:00</dd></div>
             </dl>
 
-            <form class="form" id="lead-form" novalidate>
+            <form class="form" id="lead-form" novalidate data-r style="--d:200ms">
               <div class="form__fields">
                 <div class="field">
                   <label class="field__label" for="f-name">Имя</label>

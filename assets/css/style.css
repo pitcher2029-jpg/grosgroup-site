@@ -48,7 +48,7 @@
 
   /* отступы, база 4/8 */
   --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;--s-9:96px;--s-10:128px;
-  --section:clamp(64px,4rem + 4vw,136px);
+  --section:clamp(56px,2.5rem + 3.4vw,112px); /* вертикальный отступ секции сверху и снизу */
   --gutter:clamp(16px,3vw,40px);
   --container:1320px;
 
@@ -59,7 +59,7 @@
 
   --ease-out:cubic-bezier(.2,.8,.2,1);
   --ease-io:cubic-bezier(.65,0,.35,1);
-  --t-micro:140ms;--t-el:240ms;--t-big:420ms;
+  --t-micro:140ms;--t-el:240ms;--t-big:420ms;--t-rev:800ms;
 
   --header-h:84px;
 
@@ -86,6 +86,12 @@ svg{width:1em;height:1em}
 .skip-link:focus{top:var(--s-4)}
 
 .container{width:100%;max-width:calc(var(--container) + 2 * var(--gutter));margin-inline:auto;padding-inline:var(--gutter)}
+
+/* Секции идут через одну: светлый фон страницы и затенённый цветом карточек направлений */
+.about,.supply,.perks,.cases,.china,.vent,.contacts{padding-block:var(--section)}
+.sec--shade{background:var(--c-surface)}
+/* Фото с фоном страницы в затенённой секции лежит на светлой плашке */
+.plate{background:var(--c-bg);border-radius:var(--r-l);padding:clamp(var(--s-3),2vw,var(--s-5))}
 
 .display{font-family:var(--f-display);font-weight:800;text-transform:uppercase;line-height:1;letter-spacing:-.02em}
 
@@ -144,8 +150,8 @@ svg{width:1em;height:1em}
 
 /* ---------- Hero ---------- */
 .hero{padding-bottom:var(--section)}
+.hero__media{overflow:hidden}
 .hero__title{padding-inline:clamp(12px,1.2vw,24px);font-size:clamp(2.5rem,4.72vw,7.5rem);text-align:center;white-space:nowrap;margin-top:clamp(4px,1vw,16px)}
-.hero__word{display:inline-block}
 .hero__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s-6);align-items:center;margin-top:clamp(var(--s-6),4vw,var(--s-9))}
 .hero__copy{grid-column:1 / span 5;display:flex;flex-direction:column;align-self:stretch;padding-block:var(--s-6) var(--s-4)}
 .hero__lead{font:800 var(--fs-xl)/1.25 var(--f-display);letter-spacing:-.01em;max-width:20ch}
@@ -180,14 +186,14 @@ svg{width:1em;height:1em}
 }
 
 /* ---------- Мы поставляем ---------- */
-.supply{padding-top:var(--section)}
 .section-title{font:700 var(--fs-2xl)/1.15 var(--f-display);letter-spacing:-.02em}
 .section-title--center{text-align:center;text-wrap:balance}
 .cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(var(--s-3),2.4vw,var(--s-8));margin-top:var(--s-6)}
 .cat{position:relative;display:flex;flex-direction:column;height:100%;padding-top:var(--s-6);background:var(--c-surface);border-radius:var(--r-l);overflow:hidden;text-decoration:none;
   transition:transform var(--t-el) var(--ease-out),box-shadow var(--t-el) var(--ease-out)}
 .cat__title{position:relative;z-index:1;padding-inline:var(--s-4);font:700 var(--fs-m)/1.2 var(--f-display);letter-spacing:-.01em;text-align:center}
-.cat__img{width:100%;aspect-ratio:1 / 1;object-fit:cover;margin-top:auto;transition:transform var(--t-big) var(--ease-out)}
+.cat__img{--cat-pad:var(--s-4);width:calc(100% - 2 * var(--cat-pad));aspect-ratio:4 / 3;object-fit:contain;margin:auto var(--cat-pad) var(--cat-pad);
+  -webkit-mask-image:var(--fade-3);mask-image:var(--fade-3);-webkit-mask-composite:source-in;mask-composite:intersect;transition:transform var(--t-big) var(--ease-out)}
 .cat__go{position:absolute;right:var(--s-4);bottom:var(--s-4);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--c-ink);color:var(--c-on-ink);font-size:20px;
   opacity:0;transform:translateY(6px);transition:opacity var(--t-el) var(--ease-out),transform var(--t-el) var(--ease-out)}
 .cat:hover{transform:translateY(-4px);box-shadow:var(--sh-2)}
@@ -199,33 +205,29 @@ svg{width:1em;height:1em}
 @media (max-width:480px){
   .cat{padding-top:var(--s-4);border-radius:var(--r-m)}
   .cat__title{font-size:var(--fs-xs);padding-inline:var(--s-2)}
+  .cat__img{--cat-pad:var(--s-2)}
 }
 
-.supply .section-title--center{margin-top:var(--section)}
 .benefits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(var(--s-3),2.4vw,var(--s-7));margin-top:var(--s-6)}
-.benefit{display:flex;flex-direction:column;align-items:center;padding:var(--s-5) var(--s-5) var(--s-6);background:var(--c-surface);border-radius:var(--r-l);text-align:center}
+/* Карточки выгод на затенённой секции светлые, иконка — на плашке цвета своего фона */
+.benefit{display:flex;flex-direction:column;align-items:center;padding:var(--s-4) var(--s-4) var(--s-6);background:var(--c-bg);border-radius:var(--r-l);text-align:center}
+.benefit__plate{display:grid;place-items:center;align-self:stretch;padding:var(--s-3);background:var(--c-surface);border-radius:var(--r-m)}
 .benefit__icon{width:auto;height:112px;-webkit-mask-image:var(--fade-3);mask-image:var(--fade-3);-webkit-mask-composite:source-in;mask-composite:intersect}
-.benefit__title{margin-top:var(--s-3);font:700 var(--fs-m)/1.25 var(--f-display);letter-spacing:-.01em}
-.benefit__text{margin-top:var(--s-3);font-size:var(--fs-s);line-height:1.55;color:var(--c-ink-2);max-width:32ch}
+.benefit__title{margin-top:var(--s-5);font:700 var(--fs-m)/1.25 var(--f-display);letter-spacing:-.01em}
+.benefit__text{margin-top:var(--s-3);padding-inline:var(--s-2);font-size:var(--fs-s);line-height:1.55;color:var(--c-ink-2);max-width:32ch}
 @media (max-width:1100px){.benefits{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.benefits{grid-template-columns:1fr}.benefit__icon{height:96px}}
 
 /* ---------- Кейсы ---------- */
-.cases{padding-top:var(--section)}
 .cases__row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--s-7);align-items:center}
-.cases__row::before{content:"";grid-column:1 / -1;grid-row:1;height:1px;background:var(--c-line);align-self:start;margin-top:calc(-1 * var(--s-7))}
 .cases__title{font:800 var(--fs-2xl)/1 var(--f-display);text-transform:uppercase;letter-spacing:-.02em}
 .cases__text{color:var(--c-muted);max-width:56ch}
-.cases__row > *{grid-row:2}
 @media (max-width:860px){
   .cases__row{grid-template-columns:1fr;gap:var(--s-4)}
-  .cases__row > *{grid-row:auto}
-  .cases__row::before{margin-top:0;margin-bottom:var(--s-5)}
-  .cases__row .btn{justify-self:start;margin-top:var(--s-2)}
+  .cases__row > :last-child{justify-self:start;margin-top:var(--s-2)}
 }
 
 /* ---------- Китай, вентиляция ---------- */
-.china,.vent{padding-top:var(--section)}
 .section-display{font-size:var(--fs-display);text-wrap:balance}
 .section-display--center{text-align:center}
 .section-display--vent{font-size:clamp(1.75rem,.4rem + 3.6vw,3.6rem);text-align:center;line-height:1.08;max-width:19em;margin-inline:auto}
@@ -257,7 +259,6 @@ svg{width:1em;height:1em}
 }
 
 /* ---------- Контакты и форма ---------- */
-.contacts{padding-top:var(--section)}
 .contacts__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s-6);align-items:end;margin-top:clamp(var(--s-5),3vw,var(--s-7))}
 .contacts__media{grid-column:1 / span 3;align-self:end;width:100%}
 .contacts__body{grid-column:4 / -1}
@@ -337,22 +338,45 @@ svg{width:1em;height:1em}
 }
 
 /* ---------- Подвал ---------- */
-.footer{margin-top:var(--section);overflow:hidden}
+.footer{overflow:hidden}
 .footer__row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s-2) var(--s-5);padding-block:var(--s-5);background:linear-gradient(var(--c-line),var(--c-line)) 50% 0 / calc(100% - 2 * var(--gutter)) 1px no-repeat;font-size:var(--fs-s);color:var(--c-muted)}
 .footer__row a{color:inherit}
 .footer__row a:hover{color:var(--c-ink)}
 .footer__mark{font:800 clamp(2.25rem,12.1vw,17rem)/.8 var(--f-display);letter-spacing:-.03em;text-align:center;white-space:nowrap;height:.62em;margin-top:var(--s-2);user-select:none}
 
-/* ---------- Движение ---------- */
-@media (prefers-reduced-motion:no-preference){
-  .js .hero__word{opacity:0;transform:translateY(.35em);animation:wordIn .7s var(--ease-out) forwards}
-  .js .hero__word:nth-child(2){animation-delay:.08s}
-  .js .hero__word:nth-child(3){animation-delay:.16s}
-  .js .hero__media img{opacity:0;transform:translateY(16px) scale(.985);animation:mediaIn .9s var(--ease-out) .22s forwards}
+/* ---------- Появление при загрузке и прокрутке ---------- */
+/* Правила работают только под html.js: без JS или если main.js не стартовал за 4 с, всё видно сразу */
+html.js [data-r]{opacity:0;transform:translateY(28px);transition:opacity var(--t-rev) var(--ease-out),transform var(--t-rev) var(--ease-out);transition-delay:calc(var(--d,0ms) + var(--i,0) * 90ms)}
+html.js [data-r="fade"]{transform:none}
+html.js [data-r].in{opacity:1;transform:none}
+/* Заголовки: слова выезжают из-под маски; после выезда маска снимается (.is-settled), чтобы не резать Ё и выносы Д, Ц, Щ */
+html.js [data-r="split"]{opacity:1;transform:none}
+.w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.14em;margin-bottom:-.14em}
+.w > span{display:inline-block}
+.is-settled .w{overflow:visible}
+.g{white-space:nowrap}
+.g--long{white-space:normal}
+html.js [data-r="split"] .w > span{transform:translateY(112%);transition:transform 900ms var(--ease-out);transition-delay:calc(var(--d,0ms) + var(--w,0) * 55ms)}
+html.js [data-r="split"].in .w > span{transform:none}
+/* Фото: шторка уезжает вправо, кадр «садится» */
+.shutter{position:relative;overflow:hidden}
+html.js .shutter[data-r]{opacity:1;transform:none}
+html.js .shutter::after{content:"";position:absolute;inset:0;background:var(--shutter,var(--c-ink));transform-origin:right;transition:transform 1000ms var(--ease-io);transition-delay:calc(var(--d,0ms) + var(--i,0) * 90ms);pointer-events:none}
+html.js .shutter.in::after{transform:scaleX(0)}
+html.js .shutter img{transform:scale(1.14);transition:transform 1600ms var(--ease-out);transition-delay:calc(var(--d,0ms) + var(--i,0) * 90ms)}
+html.js .shutter.in img{transform:none}
+/* Шапка съезжает сверху вместе с первым экраном */
+html.js .header{transform:translateY(-100%);transition:transform 600ms var(--ease-out),box-shadow var(--t-el) var(--ease-io)}
+html.js .header.in{transform:none}
+
+/* Печать и уменьшение движения: всё видно сразу, без шторок */
+@media print{
+  html.js [data-r],html.js [data-r] .w > span,html.js .shutter img,html.js .header{opacity:1!important;transform:none!important;transition:none!important}
+  html.js .shutter::after{display:none}
 }
-@keyframes wordIn{to{opacity:1;transform:none}}
-@keyframes mediaIn{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
+  html.js [data-r],html.js [data-r] .w > span,html.js .shutter img,html.js .header{opacity:1!important;transform:none!important;transition:none!important}
+  html.js .shutter::after{display:none}
   *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
 }

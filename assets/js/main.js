@@ -1,4 +1,4 @@
-// GROSGROUP — поведение прототипа: меню, активный пункт навигации, форма заявки.
+// GROSGROUP — поведение прототипа: меню, активный пункт навигации, появление блоков, форма заявки.
 (() => {
   'use strict';
 
@@ -58,6 +58,10 @@
     const el = href === '#top' ? $('.hero') : $(href);
     if (el) targets.set(el, a);
   });
+  // Выгоды — продолжение «Услуг», отдельная секция только ради фона
+  const perks = $('.perks');
+  const supplyLink = links.find((a) => a.getAttribute('href') === '#supply');
+  if (perks && supplyLink) targets.set(perks, supplyLink);
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => {
@@ -75,6 +79,80 @@
   }));
 
   $$('[data-year]').forEach((el) => { el.textContent = new Date().getFullYear(); });
+
+  // ---------- Появление при загрузке и прокрутке ----------
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Заголовки с data-r="split" режутся на слова: каждое выезжает из-под маски с задержкой
+  $$('[data-r="split"]').forEach((el) => {
+    let n = 0;
+    const walk = (node) => {
+      [...node.childNodes].forEach((ch) => {
+        if (ch.nodeType === 3) {
+          // Слова, склеенные неразрывным пробелом (предлог + слово), идут одной неразрывной группой
+          const frag = document.createDocumentFragment();
+          const tokens = ch.textContent.split(/([ \u00a0\n\t]+)/);
+          let group = null, len = 0;
+          const close = () => { if (group) { if (len > 12) group.classList.add('g--long'); frag.append(group); } group = null; len = 0; };
+          tokens.forEach((t, k) => {
+            if (!t) return;
+            if (/^[ \u00a0\n\t]+$/.test(t)) {
+              if (/[ \n\t]/.test(t)) { close(); frag.append(' '); } else if (group) { group.append(' '); len += 1; }
+              return;
+            }
+            if (!group) { group = document.createElement('span'); group.className = 'g'; }
+            const w = document.createElement('span');
+            w.className = 'w';
+            const inner = document.createElement('span');
+            inner.textContent = t;
+            inner.style.setProperty('--w', n++);
+            w.append(inner);
+            group.append(w);
+            len += t.length;
+            const next = tokens[k + 1];
+            if (next === undefined || /[ \n\t]/.test(next)) close();
+          });
+          close();
+          ch.replaceWith(frag);
+        } else if (ch.nodeType === 1 && ch.tagName !== 'BR') walk(ch);
+      });
+    };
+    walk(el);
+    el.dataset.words = n;
+  });
+  // Порядковый номер внутри группы задаёт задержку «лесенкой»
+  $$('[data-stagger]').forEach((g) => $$('[data-r]', g).forEach((el, i) => el.style.setProperty('--i', i)));
+
+  const show = (el) => {
+    el.classList.add('in');
+    if (el.dataset.r !== 'split') return;
+    // Когда слова встали на место, маска больше не нужна: снимаем, чтобы не обрезать Ё и выносы букв
+    const delay = parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0;
+    setTimeout(() => el.classList.add('is-settled'), reduce ? 0 : delay + el.dataset.words * 55 + 950);
+  };
+  const hero = $('.hero');
+  if (reduce || !('IntersectionObserver' in window)) {
+    show(header);
+    $$('[data-r]').forEach(show);
+  } else {
+    const rio = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        show(en.target);
+        rio.unobserve(en.target);
+      });
+    }, { threshold: 0 });
+    $$('[data-r]').forEach((el) => { if (!hero.contains(el)) rio.observe(el); });
+    // Фокус с клавиатуры показывает свой блок сразу, даже если тот ещё не попал в окно
+    document.addEventListener('focusin', (e) => {
+      for (let el = e.target.closest('[data-r]'); el; el = el.parentElement && el.parentElement.closest('[data-r]')) {
+        if (!el.classList.contains('in')) { show(el); rio.unobserve(el); }
+      }
+    });
+    // Первый экран стартует после шрифтов, чтобы маска заголовка не прыгала; ждём не дольше 700 мс
+    Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise((r) => setTimeout(r, 700))])
+      .then(() => requestAnimationFrame(() => { show(header); $$('[data-r]', hero).forEach(show); }));
+  }
+  document.documentElement.classList.add('r-ok');
 
   // ---------- Форма ----------
   const form = $('#lead-form');
