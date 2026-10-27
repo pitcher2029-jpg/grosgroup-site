@@ -78,5 +78,12 @@ test('prelaunch-check: блокеры в прототипе; после запо
   const ext = run('prelaunch-check.mjs', '--report', '--root', dir);
   assert.match(ext.stdout, /deploy\/nginx\.conf: CONFIG\.endpoint ведёт на https:\/\/api\.example\.ru/);
   assert.match(ext.stdout, /deploy\/apache\.htaccess: CONFIG\.endpoint ведёт на/);
+  // Источник вписан в connect-src — блокера нет (комментарий со словом connect-src не мешает)
+  for (const f of ['deploy/nginx.conf', 'deploy/apache.htaccess']) {
+    const p = path.join(dir, f);
+    await writeFile(p, (await readFile(p, 'utf8')).replace("connect-src 'self'", "connect-src 'self' https://api.example.ru"));
+  }
+  const fixed = run('prelaunch-check.mjs', '--report', '--root', dir);
+  assert.doesNotMatch(fixed.stdout, /CONFIG\.endpoint ведёт на/);
   await rm(dir, { recursive: true });
 });

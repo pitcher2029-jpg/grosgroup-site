@@ -15,8 +15,9 @@ export const LIMITS = {
   minFillMs: 3000,               // быстрее человек форму не заполнит
   rateCount: 8,                  // запросов с одного IP за окно
   rateWindowMs: 10 * 60 * 1000,
-  channelTimeoutMs: 20000,       // Telegram и вебхук
-  smtpDeadlineMs: 45000,         // всё письмо целиком; nginx ждёт ответа 90 с
+  // Ответ должен успеть до proxy_read_timeout nginx (90 с): очередь (http.mjs, 20 с) + самый медленный канал (30 с)
+  channelTimeoutMs: 30000,       // Telegram и вебхук: весь канал целиком, включая все файлы
+  smtpDeadlineMs: 30000,         // всё письмо целиком
   retentionDays: 395,            // резервная копия: 12 месяцев по политике + запас на уничтожение
 };
 const EXT = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'png', 'jpg', 'jpeg', 'dwg', 'zip']);
@@ -29,12 +30,14 @@ const normPhone = (v) => {
   return `+7 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7, 9)}-${d.slice(9)}`;
 };
 // Имя файла без путей и управляющих символов; длинное имя укорачивается с сохранением расширения
+// Длина считается в символах, а не в кодовых единицах UTF-16: эмодзи на границе не режется пополам
 export const safeName = (name) => {
-  const clean = String(name).split(/[\\/]/).pop().replace(/[\x00-\x1f\x7f"<>|:*?]/g, '_').trim() || 'file';
-  if (clean.length <= 120) return clean;
-  const dot = clean.lastIndexOf('.');
-  const ext = dot > 0 && clean.length - dot <= 10 ? clean.slice(dot) : '';
-  return clean.slice(0, 120 - ext.length) + ext;
+  const clean = String(name).split(/[\\/]/).pop().replace(/[\x00-\x1f\x7f"<>|:*?]/g, '_').replace(/[\ud800-\udfff]/gu, '_').trim() || 'file';
+  const chars = [...clean];
+  if (chars.length <= 120) return clean;
+  const dot = chars.lastIndexOf('.');
+  const ext = dot > 0 && chars.length - dot <= 10 ? chars.slice(dot) : [];
+  return chars.slice(0, 120 - ext.length).concat(ext).join('');
 };
 
 export function validate(fd) {
@@ -78,6 +81,7 @@ export function leadText(lead) {
 // files — [{ name, size, blob }]: содержимое файлов не копируется, каждый канал читает Blob сам.
 function channels(env, fetchImpl) {
   const list = [];
+  // Один срок на весь канал: сообщение и все файлы Telegram укладываются в него вместе
   const timeout = () => AbortSignal.timeout(Number(env.CHANNEL_TIMEOUT_MS) || LIMITS.channelTimeoutMs);
   if (env.SMTP_HOST && env.MAIL_TO) {
     list.push(['почта', (lead, files) => sendMail({
@@ -99,18 +103,19 @@ function channels(env, fetchImpl) {
   if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
     const api = (env.TG_API_BASE || 'https://api.telegram.org') + '/bot' + env.TG_BOT_TOKEN;
     list.push(['telegram', async (lead, files) => {
+      const signal = timeout();
       const r = await fetchImpl(api + '/sendMessage', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: leadText(lead).slice(0, 4000) }),
-        signal: timeout(),
+        signal,
       });
       if (!r.ok) throw new Error('Telegram sendMessage: HTTP ' + r.status);
       for (const f of files) {
         const fd = new FormData();
         fd.append('chat_id', env.TG_CHAT_ID);
         fd.append('document', f.blob, f.name);
-        const rd = await fetchImpl(api + '/sendDocument', { method: 'POST', body: fd, signal: timeout() });
+        const rd = await fetchImpl(api + '/sendDocument', { method: 'POST', body: fd, signal });
         if (!rd.ok) throw new Error('Telegram sendDocument: HTTP ' + rd.status);
       }
     }]);
@@ -139,7 +144,16 @@ async function store(dir, lead, files) {
     used.add(name);
     await pipeline(Readable.fromWeb(f.blob.stream()), createWriteStream(path.join(own, name), { mode: 0o600 }));
   }
-  await appendFile(path.join(dir, 'leads.jsonl'), JSON.stringify(lead) + '\n', { mode: 0o600 });
+  await exclusive(() => appendFile(path.join(dir, 'leads.jsonl'), JSON.stringify(lead) + '\n', { mode: 0o600 }));
+}
+
+// leads.jsonl дописывается при приёме и переписывается при очистке; обе операции — в одном процессе,
+// поэтому достаточно очереди промисов: без неё строка, дописанная во время очистки, пропала бы при rename
+let jsonlQueue = Promise.resolve();
+function exclusive(fn) {
+  const run = jsonlQueue.then(fn);
+  jsonlQueue = run.catch(() => {});
+  return run;
 }
 
 /**
@@ -155,16 +169,16 @@ export async function purgeStore(dir, days = LIMITS.retentionDays, now = Date.no
     if (old(id)) { await rm(path.join(filesDir, id), { recursive: true, force: true }); removed++; }
   }
   const jsonl = path.join(dir, 'leads.jsonl');
-  const text = await readFile(jsonl, 'utf8').catch(() => null);
-  if (text) {
+  removed += await exclusive(async () => {
+    const text = await readFile(jsonl, 'utf8').catch(() => null);
+    if (!text) return 0;
     const lines = text.split('\n').filter(Boolean);
     const keep = lines.filter((l) => { try { return !old(JSON.parse(l).id); } catch { return true; } });
-    if (keep.length !== lines.length) {
-      await writeFile(jsonl + '.tmp', keep.map((l) => l + '\n').join(''), { mode: 0o600 });
-      await rename(jsonl + '.tmp', jsonl);
-      removed += lines.length - keep.length;
-    }
-  }
+    if (keep.length === lines.length) return 0;
+    await writeFile(jsonl + '.tmp', keep.map((l) => l + '\n').join(''), { mode: 0o600 });
+    await rename(jsonl + '.tmp', jsonl);
+    return lines.length - keep.length;
+  });
   return removed;
 }
 

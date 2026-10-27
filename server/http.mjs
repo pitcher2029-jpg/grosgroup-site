@@ -6,15 +6,20 @@ import { Readable, Transform, pipeline } from 'node:stream';
 import { pathToFileURL } from 'node:url';
 import { createLeadHandler, purgeStore, LIMITS } from './lead.mjs';
 
-// Очередь: одновременно разбирается не больше max заявок (заявка с файлами занимает в памяти до ~150 МБ)
-function limiter(max, queueMax) {
+// Очередь: одновременно разбирается не больше max заявок (замер: 5 файлов по 10 МБ — около 320 МБ пика).
+// Ожидание ограничено waitMs: иначе ответ придёт после тайм-аута nginx и пользователь отправит заявку повторно
+function limiter(max, queueMax, waitMs) {
   let active = 0;
   const waiting = [];
   return {
     acquire() {
       if (active < max) { active++; return Promise.resolve(true); }
       if (waiting.length >= queueMax) return Promise.resolve(false);
-      return new Promise((resolve) => waiting.push(resolve));
+      return new Promise((resolve) => {
+        const entry = (v) => { clearTimeout(t); resolve(v); };
+        const t = setTimeout(() => { waiting.splice(waiting.indexOf(entry), 1); resolve(false); }, waitMs);
+        waiting.push(entry);
+      });
     },
     release() {
       const next = waiting.shift();
@@ -28,7 +33,7 @@ export function createServer(env = process.env, opts = {}) {
   const log = opts.log || console;
   const leadPath = env.LEAD_PATH || '/api/lead';
   const cors = env.ALLOW_ORIGIN ? { 'access-control-allow-origin': env.ALLOW_ORIGIN, vary: 'Origin' } : {};
-  const slots = limiter(Number(env.MAX_CONCURRENT) || 2, env.MAX_QUEUE !== undefined ? Number(env.MAX_QUEUE) : 20);
+  const slots = limiter(Number(env.MAX_CONCURRENT) || 2, env.MAX_QUEUE !== undefined ? Number(env.MAX_QUEUE) : 20, Number(env.QUEUE_WAIT_MS) || 20000);
 
   const server = http.createServer(async (req, res) => {
     const send = (status, body, extra = {}) => {

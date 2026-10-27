@@ -74,7 +74,8 @@ for (const f of ['deploy/nginx.conf', 'deploy/apache.htaccess']) {
   const ep = cfg('endpoint') || '';
   if (/^https?:\/\//i.test(ep)) {
     const origin = new URL(ep).origin;
-    const connect = /connect-src([^;"]*)/.exec(conf)?.[1].trim().split(/\s+/) || [];
+    // Строки-комментарии убираются: в .htaccess слово connect-src есть и в пояснении
+    const connect = /connect-src([^;"]*)/.exec(conf.replace(/^\s*#.*$/gm, ''))?.[1].trim().split(/\s+/) || [];
     if (!connect.includes(origin) && !(canonical && new URL(canonical).origin === origin)) block(`${f}: CONFIG.endpoint ведёт на ${origin}, а в connect-src его нет — браузер заблокирует отправку формы`);
   }
 }

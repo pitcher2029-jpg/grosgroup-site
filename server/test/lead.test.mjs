@@ -5,7 +5,7 @@ import net from 'node:net';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createLeadHandler, LIMITS, safeName, purgeStore } from '../lead.mjs';
 import { createServer } from '../http.mjs';
 import { encodeHeader } from '../smtp.mjs';
@@ -287,6 +287,82 @@ test('почта: двоичное вложение передаётся по ч
   const part = got.data.split("filename*=UTF-8''draw.dwg\r\n\r\n")[1].split('\r\n--')[0];
   assert.ok(part.split('\r\n').every((l) => l.length <= 76), 'строки base64 не длиннее 76');
   assert.ok(Buffer.from(part.replace(/\r\n/g, ''), 'base64').equals(Buffer.from(bin)));
+});
+
+test('Telegram: срок канала общий на сообщение и все файлы', async () => {
+  const srv = http.createServer((rq, rs) => {
+    rq.resume();
+    rq.on('end', () => setTimeout(() => { rs.writeHead(200); rs.end('{"ok":true}'); }, rq.url.endsWith('sendDocument') ? 250 : 0));
+  });
+  const port = await listen(srv);
+  const errors = [];
+  const env = { TG_BOT_TOKEN: 'T', TG_CHAT_ID: '-1', TG_API_BASE: `http://127.0.0.1:${port}`, CHANNEL_TIMEOUT_MS: '400' };
+  const h = createLeadHandler(env, { now: () => T0, log: { error: (...a) => errors.push(a.join(' ')) } });
+  const t = Date.now();
+  const files = [1, 2, 3, 4].map((i) => ({ name: i + '.pdf', data: 'x' }));
+  const r = await h(req(form({}, files)), { ip: '1' });
+  const took = Date.now() - t;
+  srv.closeAllConnections();
+  srv.close();
+  assert.equal(r.status, 502);
+  assert.ok(took < 800, `канал остановлен по общему сроку, а не через ${took} мс`);
+});
+
+test('HTTP: ожидание в очереди ограничено — 503 busy, а не ответ после тайм-аута nginx', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const fetchImpl = async () => { await gate; return new Response(''); };
+  const srv = createServer({ WEBHOOK_URL: 'http://crm', MAX_CONCURRENT: '1', MAX_QUEUE: '5', QUEUE_WAIT_MS: '200' }, { now: () => T0, fetchImpl, log: quiet });
+  const port = await listen(srv);
+  const base = `http://127.0.0.1:${port}`;
+  const first = fetch(base + '/api/lead', { method: 'POST', body: form() });
+  await new Promise((r) => setTimeout(r, 100));
+  const t = Date.now();
+  const second = await fetch(base + '/api/lead', { method: 'POST', body: form() });
+  assert.equal(second.status, 503);
+  assert.ok(Date.now() - t < 1000);
+  release();
+  assert.equal((await first).status, 200);
+  assert.equal((await fetch(base + '/api/lead', { method: 'POST', body: form() })).status, 200, 'слот после ухода из очереди не потерян');
+  srv.close();
+});
+
+test('очистка резервной копии одновременно с приёмом заявок не теряет новые строки', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'gg-race-'));
+  const old = Array.from({ length: 20000 }, (_, i) => JSON.stringify({ id: '20240101-' + i, pad: 'x'.repeat(500) })).join('\n') + '\n';
+  await writeFile(path.join(dir, 'leads.jsonl'), old);
+  const h = createLeadHandler({ LEAD_STORE_DIR: dir, WEBHOOK_URL: 'http://x' }, { now: () => T0, log: quiet, fetchImpl: async () => new Response('') });
+  // Заявки идут непрерывно, пока идёт очистка, — как в журнале на живом сервере
+  let accepted = 0;
+  let stop = false;
+  const writer = async (k) => {
+    for (let i = 0; !stop; i++) {
+      if ((await h(req(form()), { ip: `w${k}-${i}` })).status === 200) accepted++;
+      await new Promise((r) => setImmediate(r));
+    }
+  };
+  const writers = [0, 1, 2, 3].map(writer);
+  assert.equal(await purgeStore(dir, 395, T0), 20000);
+  await new Promise((r) => setTimeout(r, 30));
+  stop = true;
+  await Promise.all(writers);
+  const lines = (await readFile(path.join(dir, 'leads.jsonl'), 'utf8')).trim().split('\n');
+  assert.ok(accepted > 0);
+  assert.equal(lines.length, accepted, 'каждая принятая заявка есть в leads.jsonl');
+});
+
+test('имя файла с символами вне BMP режется по символам, письмо уходит', async () => {
+  const name = 'а'.repeat(115) + '😀😀.pdf';
+  const s = safeName(name);
+  assert.ok(s.endsWith('.pdf'));
+  assert.doesNotThrow(() => encodeURIComponent(s));
+  const { srv, got } = fakeSmtp();
+  const port = await listen(srv);
+  const env = { SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_SECURE: '0', MAIL_FROM: 'u@x.ru', MAIL_TO: 'a@x.ru' };
+  const h = createLeadHandler(env, { now: () => T0, log: quiet });
+  assert.equal((await h(req(form({}, [{ name, data: 'x' }])), { ip: '1' })).status, 200);
+  srv.close();
+  assert.ok(got.data.includes('filename*='));
 });
 
 test('заголовок письма: длинная кириллица режется на слова не длиннее 75 символов', () => {
