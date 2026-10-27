@@ -158,8 +158,11 @@
   const form = $('#lead-form');
   if (!form) return;
   const f = {
-    name: $('#f-name'), phone: $('#f-phone'), email: $('#f-email'), desc: $('#f-desc'), files: $('#f-files'),
+    name: $('#f-name'), phone: $('#f-phone'), email: $('#f-email'), desc: $('#f-desc'), files: $('#f-files'), consent: $('#f-consent'),
   };
+  // Метка загрузки страницы: сервер отсеет заявки, отправленные быстрее, чем человек успел бы заполнить форму
+  $('#f-ts').value = String(Date.now());
+  const trap = $('#f-website');
   const fileList = $('#file-list');
   const errorBox = $('#form-error');
   const submitBtn = $('.pill--submit', form);
@@ -228,18 +231,19 @@
       return !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? '' : 'Проверьте адрес почты, например: name@company.ru';
     },
     desc: () => '',
+    consent: () => (f.consent.checked ? '' : 'Нужно согласие на обработку персональных данных'),
   };
   const showError = (key, msg) => {
     const input = f[key];
-    const field = input.closest('.field');
+    const field = input.closest('.field, .consent');
     field.classList.toggle('is-invalid', !!msg);
     input.setAttribute('aria-invalid', msg ? 'true' : 'false');
     $('#' + input.id + '-err').textContent = msg;
   };
   const validate = (key) => { const msg = rules[key](); showError(key, msg); return !msg; };
   Object.keys(rules).forEach((key) => {
-    f[key].addEventListener('blur', () => { if (f[key].value) validate(key); });
-    f[key].addEventListener('input', () => { if (f[key].closest('.field').classList.contains('is-invalid')) validate(key); });
+    if (f[key].type !== 'checkbox') f[key].addEventListener('blur', () => { if (f[key].value) validate(key); });
+    f[key].addEventListener('input', () => { if (f[key].closest('.field, .consent').classList.contains('is-invalid')) validate(key); });
   });
 
   // Файлы
@@ -320,6 +324,8 @@
     if (submitBtn.getAttribute('aria-busy') === 'true') return;
     const bad = Object.keys(rules).filter((k) => !validate(k));
     if (bad.length) { f[bad[0]].focus(); return; }
+    // Заполненная ловушка — бот: показываем успех, ничего не отправляя
+    if (trap.value) { setDone(true); return; }
 
     const data = new FormData(form);
     data.delete('files');

@@ -282,7 +282,22 @@ svg{width:1em;height:1em}
 .field__error{min-height:0;padding-left:var(--s-5);font-size:var(--fs-xs);line-height:1.4;color:var(--c-error-on-ink)}
 .field__error:not(:empty){margin-top:var(--s-2)}
 
-.form__bar{display:grid;grid-template-columns:1fr 1fr auto;gap:var(--s-4);margin-top:var(--s-6)}
+/* Согласие на обработку ПДн: квадрат 24 px, кликабельна и подпись */
+.consent{display:grid;grid-template-columns:auto 1fr;gap:var(--s-2) var(--s-3);align-items:start;margin-top:var(--s-6)}
+.consent__box{appearance:none;-webkit-appearance:none;display:grid;place-content:center;width:24px;height:24px;margin:0;border:2px solid var(--c-on-ink);border-radius:6px;background:transparent;cursor:pointer;
+  transition:background-color var(--t-micro) var(--ease-io),border-color var(--t-micro) var(--ease-io)}
+.consent__box::before{content:"";width:12px;height:12px;background:var(--c-ink);clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0,43% 62%);transform:scale(0);transition:transform var(--t-micro) var(--ease-out)}
+.consent__box:checked{background:var(--c-on-ink)}
+.consent__box:checked::before{transform:scale(1)}
+.consent__box:focus-visible{outline:3px solid var(--c-on-ink);outline-offset:3px;border-radius:6px}
+.consent.is-invalid .consent__box{border-color:var(--c-error-on-ink)}
+.consent__label{padding-top:1px;font-size:var(--fs-s);line-height:1.5;cursor:pointer}
+.consent__label a{color:var(--c-on-ink)}
+.consent__error{grid-column:2;padding-left:0}
+.consent__error:not(:empty){margin-top:0}
+.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+
+.form__bar{display:grid;grid-template-columns:1fr 1fr auto;gap:var(--s-4);margin-top:var(--s-5)}
 .pill{display:flex;align-items:center;justify-content:center;gap:var(--s-2);min-height:60px;padding:var(--s-2) var(--s-6);background:var(--c-on-ink);color:var(--c-ink);border:0;border-radius:var(--r-pill);
   font:700 var(--fs-s)/1.2 var(--f-display);text-transform:uppercase;letter-spacing:.01em;text-align:center}
 .pill--btn{cursor:pointer;transition:transform var(--t-micro) var(--ease-out),background-color var(--t-el) var(--ease-io)}

@@ -281,6 +281,18 @@
                 </div>
               </div>
 
+              <div class="consent">
+                <input class="consent__box" id="f-consent" name="consent" type="checkbox" value="yes" required aria-describedby="f-consent-err">
+                <label class="consent__label" for="f-consent">Даю <a href="consent.html" target="_blank" rel="noopener">согласие на&nbsp;обработку персональных данных</a></label>
+                <p class="field__error consent__error" id="f-consent-err" aria-live="polite"></p>
+              </div>
+              <!-- Ловушка для ботов: человек это поле не видит и не заполняет -->
+              <div class="hp" aria-hidden="true">
+                <label for="f-website">Сайт компании</label>
+                <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+              </div>
+              <input id="f-ts" name="ts" type="hidden">
+
               <div class="form__bar">
                 <label class="pill pill--btn" for="f-files">
                   <svg class="pill__icon"><use href="#i-clip"/></svg>Прикрепить файл
@@ -295,7 +307,7 @@
                 </button>
               </div>
               <p class="form__error" id="form-error" role="alert" hidden></p>
-              <p class="form__note">Нажимая «Отправить», вы соглашаетесь с&nbsp;<a href="#" data-todo="privacy">политикой обработки персональных данных</a>.</p>
+              <p class="form__note">Как мы храним и&nbsp;используем данные — в&nbsp;<a href="privacy.html">политике обработки персональных данных</a>.</p>
 
               <div class="form__done" hidden>
                 <h3 class="form__done-title" tabindex="-1">Заявка принята</h3>
