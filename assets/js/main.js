@@ -7,10 +7,58 @@
     endpoint: '',            // например '/api/lead' — POST multipart/form-data
     maxFiles: 5,
     maxFileSize: 10 * 1024 * 1024,
+    metrikaId: '',           // номер счётчика Яндекс Метрики; пусто — счётчика и окна о cookie нет
   };
 
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+
+  // ---------- Метрика: загружается только после согласия на cookie ----------
+  const COOKIE_KEY = 'gg-cookie';
+  const store = {
+    get() { try { return localStorage.getItem(COOKIE_KEY); } catch (e) { return null; } },
+    set(v) { try { localStorage.setItem(COOKIE_KEY, v); } catch (e) { /* приватный режим: спросим в следующий раз */ } },
+  };
+  let metrikaOn = false;
+  const loadMetrika = () => {
+    if (metrikaOn) return;
+    metrikaOn = true;
+    const id = Number(CONFIG.metrikaId);
+    window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+    window.ym.l = Date.now();
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://mc.yandex.ru/metrika/tag.js';
+    document.head.append(s);
+    window.ym(id, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+  };
+  // Цели: lead — заявка отправлена, tel и mail — клик по телефону и почте
+  const goal = (name) => { if (metrikaOn) window.ym(Number(CONFIG.metrikaId), 'reachGoal', name); };
+
+  if (CONFIG.metrikaId) {
+    const choice = store.get();
+    if (choice === 'yes') loadMetrika();
+    else if (choice !== 'no') {
+      const bar = document.createElement('section');
+      bar.className = 'cookie';
+      bar.setAttribute('aria-label', 'Cookie');
+      bar.innerHTML = '<p class="cookie__text">Для статистики посещений сайт использует cookie Яндекс Метрики. Подробнее — в&nbsp;<a href="privacy.html#cookies">политике</a>.</p>'
+        + '<div class="cookie__btns"><button class="btn btn--light cookie__btn" type="button" data-cookie="yes">Принять</button>'
+        + '<button class="cookie__no" type="button" data-cookie="no">Отклонить</button></div>';
+      bar.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cookie]');
+        if (!b) return;
+        store.set(b.dataset.cookie);
+        if (b.dataset.cookie === 'yes') loadMetrika();
+        bar.remove();
+      });
+      document.body.append(bar);
+    }
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="tel:"], a[href^="mailto:"]');
+      if (a) goal(a.protocol === 'tel:' ? 'tel' : 'mail');
+    });
+  }
 
   // ---------- Шапка и меню ----------
   const header = $('.header');
@@ -350,6 +398,7 @@
     errorBox.textContent = '';
     try {
       await send(data);
+      goal('lead');
       setDone(true);
     } catch (err) {
       errorBox.textContent = failText(err);

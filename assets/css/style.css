@@ -368,6 +368,20 @@ svg{width:1em;height:1em}
   .footer__links{align-items:flex-end}
 }
 
+/* ---------- Окно о cookie (создаёт main.js, если задан CONFIG.metrikaId) ---------- */
+.cookie{position:fixed;z-index:60;left:var(--gutter);bottom:calc(var(--s-4) + env(safe-area-inset-bottom));max-width:min(480px,calc(100vw - 2 * var(--gutter)));padding:var(--s-5);background:var(--c-ink);color:var(--c-on-ink);border-radius:var(--r-l);box-shadow:var(--sh-2);
+  animation:cookie-in var(--t-big) var(--ease-out) both}
+.cookie :focus-visible{outline-color:var(--c-on-ink)}
+@media (min-width:900px){.cookie{left:auto;right:var(--gutter)}}  /* справа — не закрывает кнопки первого экрана */
+@media (max-width:560px){.cookie{right:var(--gutter);padding:var(--s-4) var(--s-5);border-radius:var(--r-m)}.cookie__btns{margin-top:var(--s-3)}}
+.cookie__text{font-size:var(--fs-s);line-height:1.5}
+.cookie__text a{color:inherit}
+.cookie__btns{display:flex;align-items:center;gap:var(--s-5);margin-top:var(--s-4)}
+.cookie__no{min-height:44px;padding:0 var(--s-2);background:none;border:0;color:var(--c-on-ink-muted);font:400 var(--fs-s)/1.2 var(--f-display);text-decoration:underline;text-underline-offset:.25em;cursor:pointer}
+.cookie__no:hover{color:var(--c-on-ink)}
+@keyframes cookie-in{from{opacity:0;transform:translateY(16px)}}
+@media print{.cookie{display:none}}
+
 /* ---------- Документы: политика, согласие ---------- */
 .doc__back{margin-left:auto;font:400 var(--fs-s)/1.2 var(--f-display);text-decoration:underline;text-underline-offset:.25em}
 .doc__back:hover{text-decoration-thickness:2px}
