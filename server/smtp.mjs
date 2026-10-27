@@ -143,12 +143,14 @@ export async function sendMail({
 }) {
   const recipients = (Array.isArray(to) ? to : String(to).split(',')).map((x) => x.trim()).filter(Boolean);
   if (!host || !from || !recipients.length) throw new Error('SMTP: не заданы сервер, отправитель или получатели');
+  // Общий срок на всё письмо, включая подключение и TLS: медленный сервер не держит заявку дольше deadlineMs
+  const started = Date.now();
   const raw = await connect(() => (secure
     ? tls.connect({ host, port: Number(port), servername: host, ...tlsOptions })
-    : net.connect({ host, port: Number(port) })), timeoutMs);
+    : net.connect({ host, port: Number(port) })), Math.min(timeoutMs, deadlineMs));
   const c = new Conn(raw, timeoutMs);
-  // Общий срок на всё письмо: медленный сервер не держит заявку дольше deadlineMs
-  const deadline = setTimeout(() => c.socket.destroy(new Error('SMTP: превышен общий срок отправки')), deadlineMs);
+  const deadline = setTimeout(() => c.socket.destroy(new Error('SMTP: превышен общий срок отправки')),
+    Math.max(0, deadlineMs - (Date.now() - started)));
   try {
     await c.cmd(null, [220], 'приветствие');
     let ehlo = await c.cmd('EHLO ' + ehloName, [250]);
