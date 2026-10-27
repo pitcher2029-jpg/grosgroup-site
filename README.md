@@ -14,9 +14,16 @@ HTML/CSS/JS без сборки: откройте `index.html` или любой
 - `assets/img/` — изображения (WebP), `assets/fonts/` — шрифты (WOFF2)
 
 ## Прототип: что не подключено
-- Отправка заявки имитируется. Адрес приёма — `CONFIG.endpoint` в `assets/js/main.js` (POST multipart/form-data).
-- Ссылки с `data-todo` ждут адресов: сайт проекта вентиляции (`vent-url`), политика обработки ПДн (`privacy`).
-- Раздел «Кейсы» — заглушка до получения материалов.
+- Отправка заявки имитируется. Адрес приёма — `CONFIG.endpoint` в `assets/js/main.js` (POST multipart/form-data);
+  обработчик — `server/` (см. `server/README.md`).
+- Ссылка `data-todo="vent-url"` ждёт адреса сайта проекта вентиляции.
+- Раздел «Кейсы» — заглушка; шаблон списка в комментарии раздела.
+- Реквизиты оператора ПДн — в квадратных скобках; политика и согласие — черновики для юриста.
+
+Порядок запуска, что нужно от заказчика и проверка готовности — `LAUNCH.md`, `node tools/prelaunch-check.mjs`.
+
+## Проверки
+- `node --test server/test/*.test.mjs tools/test/*.test.mjs`
 
 ## Шрифты (по ТЗ)
 - Логотип GROSGROUP в шапке — Arimo Bold (SIL OFL 1.1, `assets/fonts/arimo-latin-700-normal.woff2`).
