@@ -88,8 +88,10 @@ svg{width:1em;height:1em}
 .container{width:100%;max-width:calc(var(--container) + 2 * var(--gutter));margin-inline:auto;padding-inline:var(--gutter)}
 
 /* Секции идут через одну: светлый фон страницы и затенённый цветом карточек направлений */
-.about,.supply,.perks,.cases,.china,.vent,.contacts{padding-block:var(--section)}
+.about,.supply,.cases,.china,.vent,.contacts{padding-block:var(--section)}
 .sec--shade{background:var(--c-surface)}
+/* Две секции без заливки подряд: отступ между ними один, а не двойной (скрытые секции не в счёт) */
+#main > section:not(.sec--shade):not([hidden]) + section:not(.sec--shade){padding-top:0}
 /* Фото с фоном страницы в затенённой секции лежит на светлой плашке */
 .plate{background:var(--c-bg);border-radius:var(--r-l);padding:clamp(var(--s-3),2vw,var(--s-5))}
 
@@ -189,10 +191,12 @@ svg{width:1em;height:1em}
 .section-title{font:700 var(--fs-2xl)/1.15 var(--f-display);letter-spacing:-.02em}
 .section-title--center{text-align:center;text-wrap:balance}
 .cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(var(--s-3),2.4vw,var(--s-8));margin-top:var(--s-6)}
-.cat{position:relative;display:flex;flex-direction:column;height:100%;padding-top:var(--s-6);background:var(--c-surface);border-radius:var(--r-l);overflow:hidden;text-decoration:none;
+/* Секция затенена: карточка светлая, фото — на плашке цвета своего фона (как у выгод) */
+.cat{position:relative;display:flex;flex-direction:column;height:100%;padding-top:var(--s-6);background:var(--c-bg);border-radius:var(--r-l);overflow:hidden;text-decoration:none;
   transition:transform var(--t-el) var(--ease-out),box-shadow var(--t-el) var(--ease-out)}
-.cat__title{position:relative;z-index:1;padding-inline:var(--s-4);font:700 var(--fs-m)/1.2 var(--f-display);letter-spacing:-.01em;text-align:center}
-.cat__img{--cat-pad:var(--s-4);width:calc(100% - 2 * var(--cat-pad));aspect-ratio:4 / 3;object-fit:contain;margin:auto var(--cat-pad) var(--cat-pad);
+.cat__title{position:relative;z-index:1;margin-bottom:var(--s-4);padding-inline:var(--s-4);font:700 var(--fs-m)/1.2 var(--f-display);letter-spacing:-.01em;text-align:center}
+.cat__plate{--cat-pad:var(--s-4);display:block;margin:auto var(--cat-pad) var(--cat-pad);padding-top:var(--s-4);background:var(--c-surface);border-radius:calc(var(--r-l) - var(--cat-pad));overflow:hidden}
+.cat__img{width:100%;aspect-ratio:4 / 3;object-fit:contain;
   -webkit-mask-image:var(--fade-3);mask-image:var(--fade-3);-webkit-mask-composite:source-in;mask-composite:intersect;transition:transform var(--t-big) var(--ease-out)}
 .cat__go{position:absolute;right:var(--s-4);bottom:var(--s-4);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--c-ink);color:var(--c-on-ink);font-size:20px;
   opacity:0;transform:translateY(6px);transition:opacity var(--t-el) var(--ease-out),transform var(--t-el) var(--ease-out)}
@@ -204,10 +208,11 @@ svg{width:1em;height:1em}
 @media (max-width:960px){.cats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:480px){
   .cat{padding-top:var(--s-4);border-radius:var(--r-m)}
-  .cat__title{font-size:var(--fs-xs);padding-inline:var(--s-2)}
-  .cat__img{--cat-pad:var(--s-2)}
+  .cat__title{margin-bottom:var(--s-3);font-size:var(--fs-xs);padding-inline:var(--s-2)}
+  .cat__plate{--cat-pad:var(--s-2);padding-top:var(--s-2);border-radius:calc(var(--r-m) - var(--cat-pad))}
 }
 
+.supply__sub{margin-top:clamp(var(--s-8),6vw,var(--s-9))}
 .benefits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(var(--s-3),2.4vw,var(--s-7));margin-top:var(--s-6)}
 /* Карточки выгод на затенённой секции светлые, иконка — на плашке цвета своего фона */
 .benefit{display:flex;flex-direction:column;align-items:center;padding:var(--s-4) var(--s-4) var(--s-6);background:var(--c-bg);border-radius:var(--r-l);text-align:center}
@@ -280,9 +285,14 @@ svg{width:1em;height:1em}
 }
 
 /* ---------- Контакты и форма ---------- */
-.contacts__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--s-6);align-items:end;margin-top:clamp(var(--s-5),3vw,var(--s-7))}
-.contacts__media{grid-column:1 / span 3;align-self:end;width:100%}
-.contacts__body{grid-column:4 / -1}
+/* Список, фото и форма — ячейки одной сетки: фото во второй строке растягивается на высоту формы */
+/* Высоту строки задаёт форма: фото лежит абсолютно и вписывается в неё; доли 2:5 — фото 609×991 по высоте формы на 1440 */
+.contacts__grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,5fr);gap:var(--s-6);margin-top:clamp(var(--s-5),3vw,var(--s-7))}
+.contacts__body{display:contents}
+.contacts__list{grid-column:2;grid-row:1}
+.contacts__media{grid-column:1;grid-row:2;width:100%;padding:0}
+.contacts__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+.contacts__body .form{grid-column:2;grid-row:2;margin-top:0}
 .contacts__list{display:grid;gap:var(--s-1);font:400 var(--fs-l)/1.5 var(--f-display);letter-spacing:-.01em}
 .contacts__list div{display:flex;flex-wrap:wrap;gap:0 .4em}
 .contacts__list dt{color:var(--c-muted)}
@@ -354,8 +364,7 @@ label.pill--btn:has(+ #f-files:focus-visible){outline:3px solid var(--c-on-ink);
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
 @media (max-width:1100px){
-  .contacts__media{grid-column:1 / span 4}
-  .contacts__body{grid-column:5 / -1}
+  .contacts__grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
   .field{grid-template-columns:1fr;gap:var(--s-2)}
   .field__label{padding-top:0;padding-left:var(--s-5);font-size:var(--fs-xs)}
   .form__bar{grid-template-columns:1fr 1fr}
@@ -364,8 +373,9 @@ label.pill--btn:has(+ #f-files:focus-visible){outline:3px solid var(--c-on-ink);
 }
 @media (max-width:860px){
   .contacts__grid{grid-template-columns:1fr}
-  .contacts__media{grid-column:1;max-width:220px;justify-self:center}
-  .contacts__body{grid-column:1}
+  .contacts__media,.contacts__list,.contacts__body .form{grid-column:1;grid-row:auto}
+  .contacts__media{align-self:auto;max-width:220px;justify-self:center}
+  .contacts__media img{position:static;height:auto}
   .contacts__list{font-size:var(--fs-m)}
 }
 @media (max-width:480px){

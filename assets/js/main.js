@@ -106,10 +106,6 @@
     const el = href === '#top' ? $('.hero') : $(href);
     if (el) targets.set(el, a);
   });
-  // Выгоды — продолжение «Услуг», отдельная секция только ради фона
-  const perks = $('.perks');
-  const supplyLink = links.find((a) => a.getAttribute('href') === '#supply');
-  if (perks && supplyLink) targets.set(perks, supplyLink);
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => {

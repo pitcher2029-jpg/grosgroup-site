@@ -75,7 +75,6 @@
         <ul class="nav__list">
           <li><a href="#top">Главная</a></li>
           <li><a href="#supply">Услуги</a></li>
-          <li><a href="#cases">Кейсы</a></li>
           <li><a href="#contacts">Контакты</a></li>
           <li><a href="#ventilation">Проект вентиляции</a></li>
         </ul>
@@ -107,7 +106,7 @@
     </section>
 
     <!-- 2. О компании -->
-    <section class="about sec--shade" aria-labelledby="about-title">
+    <section class="about" aria-labelledby="about-title">
       <div class="container">
         <div class="about__band" data-r>
           <div class="about__head">
@@ -120,47 +119,42 @@
       </div>
     </section>
 
-    <!-- 3. Мы поставляем -->
-    <section class="supply" id="supply" aria-labelledby="supply-title">
+    <!-- 3. Мы поставляем и выгоды: один блок с заливкой -->
+    <section class="supply sec--shade" id="supply" aria-labelledby="supply-title">
       <div class="container">
         <h2 class="section-title" id="supply-title" data-r="split">Мы поставляем</h2>
         <ul class="cats" data-stagger>
           <li data-r>
             <a class="cat" href="#contacts" data-topic="Расходники">
               <h3 class="cat__title">Расходники</h3>
-              <img class="cat__img" src="assets/img/cat-consumables.webp" width="1088" height="816" loading="lazy" alt="Отрезные и лепестковые круги, проволока, щётка, твердосплавные пластины">
+              <span class="cat__plate"><img class="cat__img" src="assets/img/cat-consumables.webp" width="1088" height="816" loading="lazy" alt="Отрезные и лепестковые круги, проволока, щётка, твердосплавные пластины"></span>
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
           <li data-r>
             <a class="cat" href="#contacts" data-topic="Оборудование">
               <h3 class="cat__title">Оборудование</h3>
-              <img class="cat__img" src="assets/img/cat-equipment.webp" width="1088" height="816" loading="lazy" alt="Настольный фрезерный станок с ЧПУ">
+              <span class="cat__plate"><img class="cat__img" src="assets/img/cat-equipment.webp" width="1088" height="816" loading="lazy" alt="Настольный фрезерный станок с ЧПУ"></span>
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
           <li data-r>
             <a class="cat" href="#contacts" data-topic="Инструмент">
               <h3 class="cat__title">Инструмент</h3>
-              <img class="cat__img" src="assets/img/cat-tools.webp" width="1088" height="816" loading="lazy" alt="Динамометрический ключ, штангенциркуль, рожково-накидные ключи, трещотка, шестигранники">
+              <span class="cat__plate"><img class="cat__img" src="assets/img/cat-tools.webp" width="1088" height="816" loading="lazy" alt="Динамометрический ключ, штангенциркуль, рожково-накидные ключи, трещотка, шестигранники"></span>
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
           <li data-r>
             <a class="cat" href="#contacts" data-topic="Оснастка">
               <h3 class="cat__title">Оснастка</h3>
-              <img class="cat__img" src="assets/img/cat-tooling.webp" width="1088" height="816" loading="lazy" alt="Станочные тиски, прихваты, установочные блоки, патроны и цанги">
+              <span class="cat__plate"><img class="cat__img" src="assets/img/cat-tooling.webp" width="1088" height="816" loading="lazy" alt="Станочные тиски, прихваты, установочные блоки, патроны и цанги"></span>
               <span class="cat__go" aria-hidden="true"><svg><use href="#i-arrow"/></svg></span>
             </a>
           </li>
         </ul>
-      </div>
-    </section>
 
-    <!-- 3б. Выгоды -->
-    <section class="perks sec--shade" aria-labelledby="benefits-title">
-      <div class="container">
-        <h2 class="section-title section-title--center" id="benefits-title" data-r="split">Закупки для производства — без лишней суеты</h2>
+        <h2 class="section-title supply__sub" id="benefits-title" data-r="split">Закупки для производства — под ключ</h2>
         <ul class="benefits" aria-labelledby="benefits-title" data-stagger>
           <li class="benefit" data-r>
             <span class="benefit__plate"><img class="benefit__icon" src="assets/img/icon-all-in-one.webp" width="320" height="320" loading="lazy" alt=""></span>
@@ -186,8 +180,8 @@
       </div>
     </section>
 
-    <!-- 4. Кейсы: в макетах раздела нет, пункт меню есть -->
-    <section class="cases" id="cases" aria-labelledby="cases-title">
+    <!-- 4. Кейсы: скрыты до готовности материалов. Включить: убрать hidden и вернуть в меню <li><a href="#cases">Кейсы</a></li> -->
+    <section class="cases" id="cases" aria-labelledby="cases-title" hidden>
       <div class="container cases__row">
         <h2 class="cases__title" id="cases-title" data-r="split">Кейсы</h2>
         <p class="cases__text" data-r style="--d:150ms">Готовим подборку реальных поставок: что искали, что привезли и&nbsp;за&nbsp;какой срок. Пока раздел наполняется — расскажите о&nbsp;своей задаче.</p>
@@ -217,7 +211,7 @@
     </section>
 
     <!-- 5. Китай -->
-    <section class="china sec--shade" aria-labelledby="china-title">
+    <section class="china" aria-labelledby="china-title">
       <div class="container">
         <h2 class="display section-display" id="china-title" data-r="split">Скоро поставки из Китая</h2>
         <div class="split">
@@ -254,7 +248,7 @@
     </section>
 
     <!-- 7. Контакты и форма -->
-    <section class="contacts sec--shade" id="contacts" aria-labelledby="contacts-title">
+    <section class="contacts" id="contacts" aria-labelledby="contacts-title">
       <div class="container">
         <h2 class="display section-display section-display--center" id="contacts-title" data-r="split">Свяжитесь с нами</h2>
         <div class="contacts__grid">
