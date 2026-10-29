@@ -46,6 +46,9 @@ test('set-domain: адреса, <base> страницы 404, домен в deplo
 
 test('prelaunch-check: блокеры в прототипе; после заполнения — код 0', async () => {
   const dir = await copy();
+  // Незаполненная скобка в реквизитах — блокер
+  const priv = path.join(dir, 'privacy.html');
+  await writeFile(priv, (await readFile(priv, 'utf8')).replace('ООО «ГРОСГРУПП»', '[НАИМЕНОВАНИЕ]').replace('4028071432 /', '[ИНН] /'));
   const r = run('prelaunch-check.mjs', '--root', dir);
   assert.equal(r.status, 1);
   assert.match(r.stdout, /\[ИНН\]/);

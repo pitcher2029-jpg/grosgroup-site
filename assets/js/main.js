@@ -378,6 +378,12 @@
     if (on) $('.form__done-title', done).focus();
   };
 
+  // «Отправить» активна только с согласием на обработку ПДн; pageshow — браузер мог восстановить галочку при возврате назад
+  const syncSubmit = () => { submitBtn.disabled = !f.consent.checked || submitBtn.getAttribute('aria-busy') === 'true'; };
+  f.consent.addEventListener('change', syncSubmit);
+  window.addEventListener('pageshow', syncSubmit);
+  syncSubmit();
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (submitBtn.getAttribute('aria-busy') === 'true') return;
@@ -404,12 +410,13 @@
       errorBox.hidden = false;
     } finally {
       submitBtn.removeAttribute('aria-busy');
-      submitBtn.disabled = false;
+      syncSubmit();
     }
   });
 
   $('[data-reset]', done).addEventListener('click', () => {
     form.reset();
+    syncSubmit();
     files = [];
     renderFiles();
     Object.keys(rules).forEach((k) => showError(k, ''));

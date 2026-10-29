@@ -348,6 +348,8 @@ label.pill--btn:has(+ #f-files:focus-visible){outline:3px solid var(--c-on-ink);
 .file-chip__rm:focus-visible{outline:2px solid var(--c-ink);outline-offset:0}
 .pill--submit{min-width:200px;padding-inline:var(--s-7)}
 .pill--submit[aria-busy="true"]{cursor:progress;opacity:.75}
+/* Без согласия на обработку ПДн кнопка неактивна */
+.pill--submit:disabled:not([aria-busy="true"]){background:var(--c-on-ink);opacity:.4;cursor:not-allowed;transform:none}
 .pill--submit[aria-busy="true"] .pill__text::after{content:"";display:inline-block;width:14px;height:14px;margin-left:var(--s-2);vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .form__note{margin-top:var(--s-4);font-size:var(--fs-xs);line-height:1.5;color:var(--c-on-ink-muted)}
@@ -419,10 +421,11 @@ label.pill--btn:has(+ #f-files:focus-visible){outline:3px solid var(--c-on-ink);
 .doc__back{margin-left:auto;font:400 var(--fs-s)/1.2 var(--f-display);text-decoration:underline;text-underline-offset:.25em}
 .doc__back:hover{text-decoration-thickness:2px}
 .doc{padding-block:clamp(var(--s-7),6vw,var(--s-9)) var(--section)}
-.doc__body{max-width:760px;font-size:var(--fs-s);line-height:1.7}
+.doc__body{max-width:760px;margin-inline:auto;font-size:var(--fs-s);line-height:1.7}
 .doc__draft{padding:var(--s-3) var(--s-4);margin-bottom:var(--s-6);border:2px solid var(--c-ink);border-radius:var(--r-s);font-weight:700;line-height:1.5}
-.doc__title{font:800 var(--fs-2xl)/1.1 var(--f-display);text-transform:uppercase;letter-spacing:-.02em;text-wrap:balance}
+.doc__title{font:800 var(--fs-2xl)/1.1 var(--f-display);text-transform:uppercase;letter-spacing:-.02em;text-wrap:balance;text-align:center}
 .doc__meta{margin-top:var(--s-3);color:var(--c-muted)}
+.doc__title + .doc__meta{text-align:center}
 .doc__toc{margin-top:var(--s-6);padding:var(--s-5) var(--s-5) var(--s-5) var(--s-4);background:var(--c-surface);border-radius:var(--r-m)}
 .doc__toc ol{margin:0;padding-left:var(--s-5)}
 .doc__toc li + li{margin-top:var(--s-1)}
