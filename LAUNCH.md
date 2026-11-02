@@ -38,10 +38,11 @@ node tools/set-domain.mjs https://grosgroup.ru --dry-run   # что измени
 node tools/set-domain.mjs https://grosgroup.ru
 git rm -r roy                                              # прототип для сравнения
 # robots.txt: удалить строку «Disallow: /roy/»
-# assets/js/main.js: CONFIG.endpoint = '/api/lead', CONFIG.metrikaId = '<номер>'
+# assets/js/main.js: CONFIG.endpoint = '/api/lead.php' (хостинг) или '/api/lead' (VPS), CONFIG.metrikaId = '<номер>'
 # заполнить скобки, убрать плашки черновика, вставить код Вебмастера и адрес проекта вентиляции
 node tools/prelaunch-check.mjs                             # код 0 — можно выкладывать
 node --test server/test/*.test.mjs tools/test/*.test.mjs
+sh tools/php-test.sh                                       # PHP-обработчик в Docker php:8.2-cli
 ```
 
 Если менялся встроенный скрипт в `<head>` `index.html`, проверка сообщит новый хэш — вписать его в CSP
@@ -72,11 +73,25 @@ nginx -t && systemctl reload nginx
 при запуске службы и раз в сутки. Письма с заявками в ящике `MAIL_TO` и сообщения в CRM заказчик удаляет
 по тому же сроку сам — сервер к ним доступа не имеет.
 
-### Вариант: виртуальный хостинг
+### Вариант: виртуальный хостинг (reg.ru, Apache + PHP 8.1+) — выбран для grosgroup.ru
 
-Статика — на хостинге с `deploy/apache.htaccess` (переименовать в `.htaccess`). Node.js там обычно нет,
-поэтому обработчик — на отдельном VPS: `CONFIG.endpoint` — полный адрес обработчика, в его окружении
-`ALLOW_ORIGIN=https://grosgroup.ru`, адрес обработчика — в `connect-src` CSP `.htaccess`.
+Заявки принимает `api/lead.php` — перенос `server/lead.mjs` на PHP: те же поля, лимиты и ответы.
+Отличие — файлы вместе до 15 МБ, чтобы письмо с вложениями прошло в Gmail (предел 25 МБ с кодированием).
+
+```text
+www/grosgroup.ru/          ← корень сайта: index.html 404.html privacy.html consent.html robots.txt sitemap.xml
+                             assets/  api/ (lead.php, .htaccess, .user.ini)  .htaccess ← deploy/apache.htaccess
+www/grosgroup-lead/        ← вне корня сайта, права 700
+  config.php               ← из deploy/lead-config.example.php, права 600: почта, Telegram, store_dir
+  data/                    ← резервная копия: leads.jsonl, files/<номер>; чистится раз в сутки (395 дней)
+```
+
+Путь к настройкам по умолчанию — `<каталог над корнем сайта>/grosgroup-lead/config.php`; другой путь — переменная
+окружения `GG_LEAD_CONFIG`. Почта: `transport => 'mail'` (sendmail хостинга, отправитель на домене — его разрешает SPF)
+или `'smtp'` через ящик на домене. Telegram: `mode => 'notice'` — только номер заявки; `'full'` — текст и файлы,
+это трансграничная передача ПДн (п. 5.3 политики и уведомление Роскомнадзора до начала). Журнал ошибок — журнал PHP
+хостинга, строки с `[lead]`; `DELIVERY_FAILED` — заявка только в резервной копии.
+`api/.user.ini` поднимает лимиты загрузки (20 МБ); после выкладки проверить, что хостинг их применил.
 
 ## 5. После выкладки
 

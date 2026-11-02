@@ -1,7 +1,6 @@
 # GROSGROUP — Apache (виртуальный хостинг). Скопировать в корень сайта под именем .htaccess.
-# На виртуальном хостинге Node.js обычно недоступен: обработчик заявок тогда работает на отдельном VPS,
-# в assets/js/main.js CONFIG.endpoint — полный адрес обработчика, а в его окружении ALLOW_ORIGIN=https://grosgroup.ru;
-# адрес обработчика добавить в connect-src ниже.
+# Заявки принимает api/lead.php (PHP 8.1+, настройки — deploy/lead-config.example.php), CONFIG.endpoint = '/api/lead.php'.
+# Вариант с Node.js на отдельном VPS (server/): CONFIG.endpoint — полный адрес обработчика, его адрес — в connect-src ниже.
 # Нужны модули mod_rewrite, mod_headers, mod_expires (у большинства хостингов включены).
 
 Options -Indexes

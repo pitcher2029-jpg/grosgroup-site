@@ -52,7 +52,8 @@ export function validate(fd) {
   if (!v.phone) errors.phone = 'Укажите телефон полностью: +7 и 10 цифр';
   if (v.email && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(v.email)) errors.email = 'Проверьте адрес почты';
   if (fd.get('consent') !== 'yes') errors.consent = 'Нужно согласие на обработку персональных данных';
-  const files = fd.getAll('files').filter((f) => typeof f === 'object' && f && f.size > 0);
+  // files[] — имя поля из формы сайта (его требует PHP-обработчик), files — прежнее имя
+  const files = [...fd.getAll('files[]'), ...fd.getAll('files')].filter((f) => typeof f === 'object' && f && f.size > 0);
   if (files.length > LIMITS.maxFiles) errors.files = `Не больше ${LIMITS.maxFiles} файлов`;
   else {
     const bad = files.find((f) => f.size > LIMITS.maxFileSize || !EXT.has(safeName(f.name).split('.').pop().toLowerCase()));

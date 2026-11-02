@@ -51,7 +51,7 @@ for (const f of pages) {
 
 // 3. Настройки main.js
 const cfg = (key) => new RegExp(key + ":\\s*'([^']*)'").exec(js)?.[1];
-if (!cfg('endpoint')) block("assets/js/main.js: CONFIG.endpoint пуст — заявки не отправляются (нужно '/api/lead')");
+if (!cfg('endpoint')) block("assets/js/main.js: CONFIG.endpoint пуст — заявки не отправляются (нужно '/api/lead.php')");
 else ok.push('приём заявок: ' + cfg('endpoint'));
 if (!cfg('metrikaId')) warn('assets/js/main.js: CONFIG.metrikaId пуст — Метрики и окна о cookie не будет');
 else ok.push('Метрика: ' + cfg('metrikaId'));

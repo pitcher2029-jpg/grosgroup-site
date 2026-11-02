@@ -1,0 +1,5 @@
+# Наружу из api/ отдаётся только обработчик заявок
+Require all denied
+<Files "lead.php">
+  Require all granted
+</Files>

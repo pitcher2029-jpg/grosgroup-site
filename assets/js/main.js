@@ -2,11 +2,13 @@
 (() => {
   'use strict';
 
-  // Куда отправлять заявку. Пусто — прототип: отправка имитируется, данные никуда не уходят.
+  // Куда отправлять заявку (POST multipart/form-data). Пусто — отправка имитируется, данные никуда не уходят.
+  // На копии сайта в GitHub Pages обработчика нет — там отправка тоже имитируется.
   const CONFIG = {
-    endpoint: '',            // например '/api/lead' — POST multipart/form-data
+    endpoint: '/api/lead.php',
     maxFiles: 5,
     maxFileSize: 10 * 1024 * 1024,
+    maxTotalSize: 15 * 1024 * 1024, // письмо с вложениями должно пройти в почту (у Gmail предел 25 МБ с кодированием)
     metrikaId: '',           // номер счётчика Яндекс Метрики; пусто — счётчика и окна о cookie нет
   };
 
@@ -299,7 +301,7 @@
       const empty = document.createElement('span');
       empty.className = 'files__empty';
       empty.id = 'f-files-hint';
-      empty.textContent = note || 'Список файлов · до 5 шт., до 10 МБ';
+      empty.textContent = note || 'Список файлов · до\u00a05\u00a0шт., вместе до\u00a015\u00a0МБ';
       fileList.append(empty);
       return;
     }
@@ -340,6 +342,7 @@
       if (files.some((x) => x.name === file.name && x.size === file.size)) skipped.push(`${file.name} уже в списке`);
       else if (file.size > CONFIG.maxFileSize) skipped.push(`${file.name} больше 10 МБ`);
       else if (files.length >= CONFIG.maxFiles) skipped.push(`${file.name}: не больше ${CONFIG.maxFiles} файлов`);
+      else if (files.reduce((s, x) => s + x.size, file.size) > CONFIG.maxTotalSize) skipped.push(`${file.name}: файлы вместе больше 15 МБ`);
       else files.push(file);
     });
     f.files.value = '';
@@ -348,7 +351,7 @@
 
   // Отправка
   const send = async (data) => {
-    if (!CONFIG.endpoint) {
+    if (!CONFIG.endpoint || location.hostname.endsWith('github.io')) {
       await new Promise((r) => setTimeout(r, 900));
       return;
     }
@@ -360,12 +363,12 @@
       throw err;
     }
   };
-  // Текст ошибки по ответу сервера (server/lead.mjs)
+  // Текст ошибки по ответу сервера (api/lead.php, server/lead.mjs)
   const failText = (err) => {
     const fields = err.body && err.body.fields;
     if (err.status === 429) return 'Слишком много заявок подряд. Подождите 10 минут или позвоните: +7 (961) 125-55-50.';
     if (err.status === 503) return 'Сейчас много заявок. Повторите через минуту или позвоните: +7 (961) 125-55-50.';
-    if (err.status === 413) return 'Файлы слишком большие: не больше 5 файлов по 10 МБ.';
+    if (err.status === 413) return 'Файлы слишком большие: не больше 5 файлов, вместе до 15 МБ.';
     if (err.status === 400 && fields) return Object.values(fields).join('. ') + '.';
     return 'Не удалось отправить заявку. Проверьте связь и повторите или позвоните: +7 (961) 125-55-50.';
   };
@@ -395,7 +398,8 @@
     elapsed.value = String(Math.round(performance.now()));
     const data = new FormData(form);
     data.delete('files');
-    files.forEach((file) => data.append('files', file, file.name));
+    // files[] — иначе PHP (api/lead.php) из одноимённых полей оставит только последний файл
+    files.forEach((file) => data.append('files[]', file, file.name));
 
     submitBtn.setAttribute('aria-busy', 'true');
     submitBtn.disabled = true;

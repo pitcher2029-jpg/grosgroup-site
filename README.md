@@ -5,7 +5,7 @@ HTML/CSS/JS без сборки: откройте `index.html` или любой
 
 ## Варианты для сравнения
 - Текущая редакция: https://pitcher2029-jpg.github.io/grosgroup-site/
-- Прототип от ROY (редизайн, один самодостаточный файл): https://pitcher2029-jpg.github.io/grosgroup-site/roy/ — `roy/index.html`
+- Прототип от ROY (редизайн, один файл) удалён перед запуском; лежит в истории git — `git show 25f36ea:roy/index.html`
 
 ## Структура
 - `index.html` — разметка страницы

@@ -46,7 +46,9 @@ test('set-domain: адреса, <base> страницы 404, домен в deplo
 
 test('prelaunch-check: блокеры в прототипе; после заполнения — код 0', async () => {
   const dir = await copy();
-  // Незаполненная скобка в реквизитах — блокер
+  // Незаполненная скобка в реквизитах и пустой адрес обработчика — блокеры
+  const jsFile = path.join(dir, 'assets/js/main.js');
+  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '/api/lead.php',", "endpoint: '',"));
   const priv = path.join(dir, 'privacy.html');
   await writeFile(priv, (await readFile(priv, 'utf8')).replace('ООО «ГРОСГРУПП»', '[НАИМЕНОВАНИЕ]').replace('4028071432 /', '[ИНН] /'));
   const r = run('prelaunch-check.mjs', '--root', dir);
@@ -63,9 +65,8 @@ test('prelaunch-check: блокеры в прототипе; после запо
     t = t.replace(/<p class="doc__draft" data-draft>.*?<\/p>/, '').replace(/href="#" data-todo="vent-url"/, 'href="https://vent.example.ru"');
     await writeFile(path.join(dir, f), t);
   }
-  const jsFile = path.join(dir, 'assets/js/main.js');
-  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '',", "endpoint: '/api/lead',"));
-  await rm(path.join(dir, 'roy'), { recursive: true });
+  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '',", "endpoint: '/api/lead.php',"));
+  await rm(path.join(dir, 'roy'), { recursive: true, force: true });
   const done = run('prelaunch-check.mjs', '--root', dir);
   assert.equal(done.status, 0, done.stdout);
 
@@ -77,7 +78,7 @@ test('prelaunch-check: блокеры в прототипе; после запо
   assert.match(csp.stdout, /deploy\/nginx\.conf: в CSP нет хэша/);
 
   // Обработчик на чужом адресе без строки в connect-src — блокер
-  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '/api/lead',", "endpoint: 'https://api.example.ru/lead',"));
+  await writeFile(jsFile, (await readFile(jsFile, 'utf8')).replace("endpoint: '/api/lead.php',", "endpoint: 'https://api.example.ru/lead',"));
   const ext = run('prelaunch-check.mjs', '--report', '--root', dir);
   assert.match(ext.stdout, /deploy\/nginx\.conf: CONFIG\.endpoint ведёт на https:\/\/api\.example\.ru/);
   assert.match(ext.stdout, /deploy\/apache\.htaccess: CONFIG\.endpoint ведёт на/);
