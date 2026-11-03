@@ -211,6 +211,7 @@
   const elapsed = $('#f-elapsed');
   const trap = $('#f-website');
   const fileList = $('#file-list');
+  const chips = $('#file-chips');
   const errorBox = $('#form-error');
   const submitBtn = $('.pill--submit', form);
   const done = $('.form__done', form);
@@ -295,18 +296,21 @@
 
   // Файлы
   const fmtSize = (b) => (b < 1024 * 1024 ? Math.max(1, Math.round(b / 1024)) + ' КБ' : (b / 1024 / 1024).toFixed(1).replace('.', ',') + ' МБ');
+  const plural = (n) => (n % 10 === 1 && n % 100 !== 11 ? 'файл' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'файла' : 'файлов');
+  // Плашка в строке кнопок — подсказка или итог (сколько файлов и объём); сами файлы — чипами под строкой о политике
   const renderFiles = (note = '') => {
-    fileList.replaceChildren();
-    if (!files.length) {
-      const empty = document.createElement('span');
-      empty.className = 'files__empty';
-      empty.id = 'f-files-hint';
-      empty.textContent = note || 'Список файлов · до\u00a05\u00a0шт., вместе до\u00a015\u00a0МБ';
-      fileList.append(empty);
-      return;
-    }
+    const sum = document.createElement('span');
+    sum.className = 'files__empty' + (files.length && !note ? ' is-sum' : '');
+    sum.textContent = note || (files.length
+      ? `${files.length}\u00a0${plural(files.length)} · ${fmtSize(files.reduce((s, x) => s + x.size, 0))}`
+      : 'Список файлов · до\u00a05\u00a0шт., вместе до\u00a015\u00a0МБ');
+    sum.title = sum.textContent;
+    fileList.replaceChildren(sum);
+    chips.classList.remove('is-leaving');
+    chips.hidden = !files.length;
+    chips.replaceChildren();
     files.forEach((file, i) => {
-      const chip = document.createElement('span');
+      const chip = document.createElement('li');
       chip.className = 'file-chip';
       const name = document.createElement('span');
       name.className = 'file-chip__name';
@@ -323,18 +327,22 @@
       rm.addEventListener('click', () => {
         files.splice(i, 1);
         renderFiles();
-        const rest = fileList.querySelectorAll('.file-chip__rm');
+        const rest = chips.querySelectorAll('.file-chip__rm');
         (rest[Math.min(i, rest.length - 1)] || f.files).focus();
       });
       chip.append(name, size, rm);
-      fileList.append(chip);
+      chips.append(chip);
     });
-    if (note) {
-      const n = document.createElement('span');
-      n.className = 'files__empty';
-      n.textContent = note;
-      fileList.append(n);
-    }
+  };
+  // После отправки чипы гаснут за 1 с (transition в .form__files), затем список очищается
+  const clearFiles = () => {
+    files = [];
+    if (chips.hidden) { renderFiles(); return; }
+    chips.classList.add('is-leaving');
+    let t;
+    const end = () => { clearTimeout(t); chips.removeEventListener('transitionend', end); if (!files.length) renderFiles(); };
+    chips.addEventListener('transitionend', end);
+    t = setTimeout(end, 1100);
   };
   f.files.addEventListener('change', () => {
     const skipped = [];
@@ -411,6 +419,7 @@
       await send(data);
       goal('lead');
       setDone(true);
+      clearFiles();
     } catch (err) {
       errorBox.textContent = failText(err);
       errorBox.hidden = false;

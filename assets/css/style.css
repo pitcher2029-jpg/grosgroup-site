@@ -312,7 +312,8 @@ svg{width:1em;height:1em}
 .contacts__list a{text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100% / 0 1px no-repeat;transition:background-size var(--t-el) var(--ease-out)}
 .contacts__list a:hover{background-size:100% 1px}
 
-.form{position:relative;margin-top:var(--s-6);padding:clamp(var(--s-5),3vw,var(--s-7)) clamp(var(--s-4),3vw,var(--s-7));background:var(--c-ink);color:var(--c-on-ink);border-radius:var(--r-xl)}
+/* --form-px — боковой отступ формы; снизу запас под ряд чипов файлов (.form__files): 8 + 28 + 8 px */
+.form{--form-px:clamp(var(--s-4),3vw,var(--s-7));position:relative;margin-top:var(--s-6);padding:clamp(var(--s-5),3vw,var(--s-7)) var(--form-px) max(clamp(var(--s-5),3vw,var(--s-7)),44px);background:var(--c-ink);color:var(--c-on-ink);border-radius:var(--r-xl)}
 .form :focus-visible{outline-color:var(--c-on-ink)}
 .form__fields{display:grid;gap:var(--s-4)}
 .field{display:grid;grid-template-columns:minmax(150px,1fr) 3fr;gap:var(--s-2) var(--s-6);align-items:start}
@@ -351,14 +352,27 @@ svg{width:1em;height:1em}
 #f-files:focus-visible + .pill--files{outline:3px solid var(--c-on-ink);outline-offset:3px}
 /* отдельным правилом: без поддержки :has() браузер отбросил бы и соседний селектор */
 label.pill--btn:has(+ #f-files:focus-visible){outline:3px solid var(--c-on-ink);outline-offset:3px}
-.pill--files{flex-wrap:wrap;justify-content:flex-start;gap:var(--s-2);padding:var(--s-2) var(--s-3);text-transform:none;font:400 var(--fs-xs)/1.3 var(--f-text);border-radius:var(--r-l);min-width:0}
-.files__empty{width:100%;text-align:center;color:var(--c-muted)}
-.file-chip{display:inline-flex;align-items:center;gap:var(--s-1);max-width:100%;padding:var(--s-1) var(--s-1) var(--s-1) var(--s-3);background:var(--c-surface);border-radius:var(--r-pill)}
-.file-chip__name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16ch}
+.pill--files{padding:var(--s-2) var(--s-4);text-transform:none;font:400 var(--fs-xs)/1.3 var(--f-text);border-radius:var(--r-l);min-width:0}
+/* Итог по файлам — не больше 2 строк: плашка не растёт, полный текст — в title */
+.files__empty{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;width:100%;text-align:center;color:var(--c-muted)}
+.files__empty.is-sum{color:var(--c-ink)}
+/* Чипы файлов: под строкой о политике, в нижнем отступе формы; position:absolute без top — по месту в потоке,
+   поэтому ошибка формы над строкой сдвигает их вместе со строкой. Один ряд с прокруткой: высота не меняется */
+.form__files{position:absolute;left:var(--form-px);right:var(--form-px);z-index:2;display:flex;gap:var(--s-2);margin:var(--s-2) 0 0;padding:0;list-style:none;
+  overflow-x:auto;scrollbar-width:none;transition:opacity 1s var(--ease-io)}
+.form__files::-webkit-scrollbar{display:none}
+.form__files[hidden]{display:none}
+.form__files.is-leaving{opacity:0;pointer-events:none}
+.file-chip{flex:none;display:inline-flex;align-items:center;gap:var(--s-1);height:28px;max-width:min(240px,80%);padding:0 2px 0 var(--s-3);
+  background:var(--c-surface);color:var(--c-ink);border-radius:var(--r-pill);font:400 var(--fs-xs)/1 var(--f-text);animation:chipIn var(--t-el) var(--ease-out)}
+@keyframes chipIn{from{opacity:0;transform:translateY(4px)}}
+.file-chip__name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-chip__size{flex:none;white-space:nowrap;color:var(--c-muted);font-variant-numeric:tabular-nums}
-.file-chip__rm{flex:none;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;font-size:14px}
+/* Кнопка 24 px, зона касания расширена псевдоэлементом */
+.file-chip__rm{position:relative;flex:none;display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;font-size:12px}
+.file-chip__rm::after{content:"";position:absolute;inset:-8px -6px}
 .file-chip__rm:hover{background:var(--c-surface-2)}
-.file-chip__rm:focus-visible{outline:2px solid var(--c-ink);outline-offset:0}
+.file-chip__rm:focus-visible{outline:2px solid var(--c-ink);outline-offset:-2px}
 .pill--submit{min-width:200px;padding-inline:var(--s-7)}
 .pill--submit[aria-busy="true"]{cursor:progress;opacity:.75}
 /* Без согласия на обработку ПДн кнопка неактивна */
