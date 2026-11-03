@@ -8,8 +8,11 @@ AddDefaultCharset utf-8
 ErrorDocument 404 /404.html
 
 RewriteEngine On
-# HTTPS и адрес без www
-RewriteCond %{HTTPS} off [OR]
+# HTTPS и адрес без www. На reg.ru TLS снимает nginx и передаёт запрос в Apache по HTTP: %{HTTPS} там всегда off,
+# схему посетителя сообщают X-Forwarded-Proto и ENV:HTTPS (справка reg.ru «Редирект с HTTP на HTTPS»)
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteCond %{ENV:HTTPS} !=on
+RewriteRule ^ https://grosgroup.ru%{REQUEST_URI} [R=301,L]
 RewriteCond %{HTTP_HOST} ^www\. [NC]
 RewriteRule ^ https://grosgroup.ru%{REQUEST_URI} [R=301,L]
 # Служебные файлы репозитория и прототип ROY наружу не отдаются
