@@ -356,10 +356,12 @@
       return;
     }
     const res = await fetch(CONFIG.endpoint, { method: 'POST', body: data });
-    if (!res.ok) {
+    // Успех — только ответ обработчика { ok: true }: 200 от заглушки хостинга или исходник PHP заявкой не считаются
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.ok !== true) {
       const err = new Error('HTTP ' + res.status);
       err.status = res.status;
-      err.body = await res.json().catch(() => null);
+      err.body = body;
       throw err;
     }
   };

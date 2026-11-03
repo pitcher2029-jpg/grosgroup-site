@@ -13,6 +13,9 @@ const GG_MIN_FILL_MS = 3000;             // быстрее человек фор
 const GG_RATE_COUNT = 8;                 // запросов с одного IP за окно
 const GG_RATE_WINDOW = 600;
 const GG_CHANNEL_TIMEOUT = 30;           // каждый канал целиком, с файлами
+const GG_TG_TIMEOUT = 10;                // Telegram без файлов: из России api.telegram.org бывает медленным
+const GG_DAY_BYTES = 1024 * 1024 * 1024; // файлов в сутки на все заявки; сверх — заявка без вложений
+const GG_NAME_BYTES = 150;               // имя файла в письме и журнале, байт UTF-8
 const GG_RETENTION_DAYS = 395;           // резервная копия: 12 месяцев по политике + запас на уничтожение
 const GG_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'png', 'jpg', 'jpeg', 'dwg', 'zip'];
 
@@ -28,8 +31,12 @@ function gg_fail(int $status, string $error, array $extra = []): never {
 }
 function gg_log(string $msg): void { error_log('[lead] ' . $msg); }
 
-function gg_str($v, int $max): string {
-  return is_string($v) ? mb_substr(trim(mb_scrub($v, 'UTF-8')), 0, $max, 'UTF-8') : '';
+// Строка из формы без управляющих символов; $line — однострочное поле: переводы строк и табуляция → пробел
+function gg_str($v, int $max, bool $line = false): string {
+  if (!is_string($v)) return '';
+  $s = mb_scrub($v, 'UTF-8');
+  $s = $line ? preg_replace('/[\x00-\x1f\x7f]+/', ' ', $s) : preg_replace('/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]+/', '', $s);
+  return mb_substr(trim($s), 0, $max, 'UTF-8');
 }
 function gg_phone(string $v): string {
   $d = preg_replace('/\D/', '', $v);
@@ -37,20 +44,23 @@ function gg_phone(string $v): string {
   if (strlen($d) !== 11 || $d[0] !== '7') return '';
   return sprintf('+7 (%s) %s-%s-%s', substr($d, 1, 3), substr($d, 4, 3), substr($d, 7, 2), substr($d, 9));
 }
-// Имя файла без путей и управляющих символов; длинное укорачивается по символам с сохранением расширения
+// Имя файла без путей и управляющих символов; длинное укорачивается до GG_NAME_BYTES байт с сохранением расширения
 function gg_safe_name(string $name): string {
   $parts = preg_split('/[\\\\\/]/', mb_scrub($name, 'UTF-8'));
   $clean = trim(preg_replace('/[\x00-\x1f\x7f"<>|:*?]/', '_', end($parts)));
   if ($clean === '') $clean = 'file';
-  $chars = mb_str_split($clean, 1, 'UTF-8');
-  if (count($chars) <= 120) return $clean;
-  $dot = strrpos($clean, '.') === false ? -1 : count(mb_str_split(substr($clean, 0, strrpos($clean, '.')), 1, 'UTF-8'));
-  $ext = $dot > 0 && count($chars) - $dot <= 10 ? array_slice($chars, $dot) : [];
-  return implode('', array_merge(array_slice($chars, 0, 120 - count($ext)), $ext));
+  if (strlen($clean) <= GG_NAME_BYTES) return $clean;
+  $p = strrpos($clean, '.');
+  $ext = $p !== false && $p > 0 && strlen($clean) - $p <= 11 ? substr($clean, $p) : '';
+  return mb_strcut($clean, 0, GG_NAME_BYTES - strlen($ext), 'UTF-8') . $ext;
 }
 function gg_ext(string $name): string {
   $p = strrpos($name, '.');
-  return $p === false ? strtolower($name) : strtolower(substr($name, $p + 1));
+  return $p === false ? '' : strtolower(substr($name, $p + 1));
+}
+function gg_ini_bytes(string $v): int {
+  $n = (int) $v;
+  return match (strtolower(substr(trim($v), -1))) { 'g' => $n << 30, 'm' => $n << 20, 'k' => $n << 10, default => $n };
 }
 
 /** Файлы из $_FILES['files'] в виде [{ name, size, tmp, error }] без пустых полей выбора. */
@@ -59,6 +69,7 @@ function gg_uploads(): array {
   if (!$f) return [];
   $list = [];
   foreach ((array) $f['name'] as $i => $name) {
+    if (!is_string($name)) continue;   // files[a][b] — не поле формы сайта
     $err = (int) ((array) $f['error'])[$i];
     if ($err === UPLOAD_ERR_NO_FILE) continue;
     $size = (int) ((array) $f['size'])[$i];
@@ -70,15 +81,15 @@ function gg_uploads(): array {
 
 function gg_validate(array $p, array $files): array {
   $v = [
-    'name' => gg_str($p['name'] ?? null, 80),
-    'phone' => gg_phone(gg_str($p['phone'] ?? null, 40)),
-    'email' => gg_str($p['email'] ?? null, 120),
+    'name' => gg_str($p['name'] ?? null, 80, true),
+    'phone' => gg_phone(gg_str($p['phone'] ?? null, 40, true)),
+    'email' => gg_str($p['email'] ?? null, 120, true),
     'description' => gg_str($p['description'] ?? null, 3000),
   ];
   $e = [];
   if (!preg_match('/\p{L}.*\p{L}/u', $v['name'])) $e['name'] = 'Укажите имя — хотя бы 2 буквы';
   if ($v['phone'] === '') $e['phone'] = 'Укажите телефон полностью: +7 и 10 цифр';
-  if ($v['email'] !== '' && !preg_match('/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/u', $v['email'])) $e['email'] = 'Проверьте адрес почты';
+  if ($v['email'] !== '' && !preg_match('/^[^\s@,;\x00-\x1f\x7f]+@[^\s@,;\x00-\x1f\x7f]+\.[^\s@,;\x00-\x1f\x7f]{2,}$/u', $v['email'])) $e['email'] = 'Проверьте адрес почты';
   if (($p['consent'] ?? null) !== 'yes') $e['consent'] = 'Нужно согласие на обработку персональных данных';
   if (count($files) > GG_MAX_FILES) $e['files'] = 'Не больше ' . GG_MAX_FILES . ' файлов';
   else {
@@ -96,6 +107,7 @@ function gg_validate(array $p, array $files): array {
 
 function gg_lead_text(array $lead): string {
   $files = $lead['files'] ? implode(', ', array_map(fn($f) => $f['name'] . ' (' . max(1, (int) round($f['size'] / 1024)) . ' КБ)', $lead['files'])) : 'нет';
+  if (!empty($lead['filesDropped'])) $files .= ' — не приложены: суточный предел файлов на сервере исчерпан, попросите клиента прислать их почтой';
   return ltrim(implode("\n", [
     !empty($lead['suspect']) ? "Внимание: {$lead['suspect']} — проверьте, не бот ли это.\n" : '',
     'Новая заявка с сайта GROSGROUP',
@@ -110,10 +122,11 @@ function gg_lead_text(array $lead): string {
     'Заявка № ' . $lead['id'],
   ]), "\n");
 }
-// Короткое уведомление без персональных данных: для Telegram, пока перевод ПДн за рубеж не оформлен
-function gg_notice_text(array $lead): string {
+// Короткое уведомление без персональных данных: для Telegram, пока перевод ПДн за рубеж не оформлен.
+// $where — где искать заявку: зависит от того, ушла ли почта
+function gg_notice_text(array $lead, string $where): string {
   return (!empty($lead['suspect']) ? "[проверить] " : '') . 'Новая заявка с сайта GROSGROUP № ' . $lead['id']
-    . "\nФайлов: " . count($lead['files']) . "\nПодробности — в почте.";
+    . "\nФайлов: " . count($lead['files']) . "\n" . $where;
 }
 
 // ---------- Резервная копия, очистка, ограничение частоты ----------
@@ -130,11 +143,9 @@ function gg_store(string $dir, array $lead, array $files): void {
   if ($files) {
     $own = $dir . '/files/' . $lead['id'];
     gg_mkdir($own);
-    $used = [];
-    foreach ($files as $f) {
-      $name = $f['name'];
-      for ($k = 2; isset($used[$name]); $k++) $name = $k . '-' . $f['name'];
-      $used[$name] = true;
+    // На диске — по номеру в заявке (1.pdf, 2.dwg): исходное имя бывает длиннее предела ФС; оно — в leads.jsonl
+    foreach ($files as $i => $f) {
+      $name = ($i + 1) . '.' . gg_ext($f['name']);
       if (!copy($f['tmp'], $own . '/' . $name)) throw new RuntimeException('файл не сохранён');
       chmod($own . '/' . $name, 0600);
     }
@@ -190,12 +201,30 @@ function gg_rate_limited(string $dir, string $ip, int $now): bool {
     return count($hits[$key]) > GG_RATE_COUNT;
   });
 }
+// Суточный предел объёма файлов на все заявки: бот с разных адресов не забьёт диск хостинга и ящик
+function gg_quota_ok(string $dir, int $now, int $bytes, int $limit): bool {
+  gg_mkdir($dir);
+  return gg_locked($dir . '/.rate.lock', function () use ($dir, $now, $bytes, $limit) {
+    $file = $dir . '/quota.json';
+    $day = gmdate('Ymd', $now);
+    $q = json_decode((string) @file_get_contents($file), true);
+    $used = is_array($q) && ($q['day'] ?? '') === $day ? (int) ($q['bytes'] ?? 0) : 0;
+    if ($used + $bytes > $limit) return false;
+    file_put_contents($file, json_encode(['day' => $day, 'bytes' => $used + $bytes]));
+    return true;
+  });
+}
 
 // ---------- Почта ----------
 function gg_mime_header(string $s): string {
   if (!preg_match('/[^\x20-\x7e]/', $s)) return $s;
-  // Куски по 15 символов: base64 от ≤ 60 байт UTF-8 + обёртка ≤ 75 знаков
-  return implode("\r\n ", array_map(fn($c) => '=?UTF-8?B?' . base64_encode($c) . '?=', mb_str_split($s, 15, 'UTF-8')));
+  // Куски до 45 байт UTF-8 без разрыва символа: base64 ≤ 60 знаков + обёртка 12 = слово ≤ 72 знаков (RFC 2047 — 75)
+  $words = [];
+  for ($i = 0, $n = strlen($s); $i < $n; $i += strlen($c)) {
+    $c = mb_strcut($s, $i, 45, 'UTF-8');
+    $words[] = '=?UTF-8?B?' . base64_encode($c) . '?=';
+  }
+  return implode("\r\n ", $words);
 }
 function gg_build_mail(array $cfg, array $lead, array $files): array {
   $from = $cfg['from'];
@@ -211,8 +240,9 @@ function gg_build_mail(array $cfg, array $lead, array $files): array {
     . chunk_split(base64_encode(str_replace("\n", "\r\n", gg_lead_text($lead))));
   foreach ($files as $f) {
     $enc = gg_mime_header($f['name']);
-    $body .= "--$b\r\nContent-Type: application/octet-stream; name=\"$enc\"\r\nContent-Transfer-Encoding: base64\r\n"
-      . "Content-Disposition: attachment; filename=\"$enc\"; filename*=UTF-8''" . rawurlencode($f['name']) . "\r\n\r\n"
+    // Параметры — на отдельных строках: filename* от 150 байт имени ≤ 450 знаков, строка письма ≤ 998 (RFC 5322)
+    $body .= "--$b\r\nContent-Type: application/octet-stream;\r\n name=\"$enc\"\r\nContent-Transfer-Encoding: base64\r\n"
+      . "Content-Disposition: attachment;\r\n filename=\"$enc\";\r\n filename*=UTF-8''" . rawurlencode($f['name']) . "\r\n\r\n"
       . chunk_split(base64_encode((string) file_get_contents($f['tmp'])));
   }
   $body .= "--$b--\r\n";
@@ -281,18 +311,27 @@ function gg_tg_call(string $api, string $method, array $fields, float $deadline)
   $left = (int) ceil($deadline - microtime(true));
   if ($left <= 0) throw new RuntimeException("Telegram $method: срок канала истёк");
   $ch = curl_init($api . '/' . $method);
-  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $fields, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $left, CURLOPT_CONNECTTIMEOUT => min(10, $left)]);
+  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $fields, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $left, CURLOPT_CONNECTTIMEOUT => min(5, $left)]);
   $res = curl_exec($ch);
   $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
   curl_close($ch);
   // В журнал — только метод и код: адрес содержит токен бота
   if ($res === false || $code !== 200) throw new RuntimeException("Telegram $method: HTTP $code");
 }
-function gg_send_tg(array $cfg, array $lead, array $files): void {
+// Telegram считает длину сообщения в единицах UTF-16 (предел 4096); суррогатная пара не разрывается
+function gg_tg_cut(string $s, int $max): string {
+  $u = mb_convert_encoding($s, 'UTF-16LE', 'UTF-8');
+  if (strlen($u) <= 2 * $max) return $s;
+  $u = substr($u, 0, 2 * $max);
+  $hi = ord($u[2 * $max - 1]);
+  if ($hi >= 0xD8 && $hi <= 0xDB) $u = substr($u, 0, -2);
+  return mb_convert_encoding($u, 'UTF-8', 'UTF-16LE');
+}
+function gg_send_tg(array $cfg, array $lead, array $files, string $where): void {
   $api = rtrim($cfg['api_base'] ?? 'https://api.telegram.org', '/') . '/bot' . $cfg['token'];
-  $deadline = microtime(true) + GG_CHANNEL_TIMEOUT;
   $full = ($cfg['mode'] ?? 'notice') === 'full';
-  gg_tg_call($api, 'sendMessage', ['chat_id' => (string) $cfg['chat_id'], 'text' => mb_substr($full ? gg_lead_text($lead) : gg_notice_text($lead), 0, 4000)], $deadline);
+  $deadline = microtime(true) + ($full ? GG_CHANNEL_TIMEOUT : GG_TG_TIMEOUT);
+  gg_tg_call($api, 'sendMessage', ['chat_id' => (string) $cfg['chat_id'], 'text' => gg_tg_cut($full ? gg_lead_text($lead) : gg_notice_text($lead, $where), 4000)], $deadline);
   if (!$full) return;
   foreach ($files as $f) {
     gg_tg_call($api, 'sendDocument', ['chat_id' => (string) $cfg['chat_id'], 'document' => new CURLFile($f['tmp'], 'application/octet-stream', $f['name'])], $deadline);
@@ -313,30 +352,37 @@ function gg_handle(): never {
   $now = (int) ($cfg['now'] ?? time());
   $dir = (string) ($cfg['store_dir'] ?? '');
   $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+  $work = $dir !== '' ? $dir : sys_get_temp_dir() . '/gg-lead';   // счётчики частоты и объёма
   try {
-    if (gg_rate_limited($dir !== '' ? $dir : sys_get_temp_dir() . '/gg-lead', $ip, $now)) gg_fail(429, 'rate_limited');
+    if (gg_rate_limited($work, $ip, $now)) gg_fail(429, 'rate_limited');
   } catch (Throwable $e) { gg_log('ограничение частоты: ' . $e->getMessage()); }
 
-  if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > GG_MAX_BODY) gg_fail(413, 'too_large');
+  $len = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+  if ($len > GG_MAX_BODY) gg_fail(413, 'too_large');
+  // Тело больше post_max_size хостинга PHP отбрасывает целиком — без этой проверки ответ был бы bad_form
+  $postMax = gg_ini_bytes((string) ini_get('post_max_size'));
+  if ($postMax > 0 && $len > $postMax) { gg_log("тело $len байт больше post_max_size=" . ini_get('post_max_size')); gg_fail(413, 'too_large'); }
   if (!$_POST) gg_fail(400, 'bad_form');
-  if (gg_str($_POST['website'] ?? null, 200) !== '') gg_respond(200, ['ok' => true]);
+  if (gg_str($_POST['website'] ?? null, 200, true) !== '') gg_respond(200, ['ok' => true]);
   // elapsed — сколько миллисекунд страница была открыта до отправки; пустое поле пометки не даёт
-  $raw = gg_str($_POST['elapsed'] ?? null, 20);
+  $raw = gg_str($_POST['elapsed'] ?? null, 20, true);
   $suspect = '';
   if ($raw !== '' && is_numeric($raw) && (float) $raw >= 0 && (float) $raw < GG_MIN_FILL_MS) {
     $suspect = 'форма отправлена через ' . number_format((float) $raw / 1000, 1, '.', '') . ' с после открытия страницы';
   }
 
   $files = gg_uploads();
+  foreach ($files as $f) {
+    if ($f['error'] === UPLOAD_ERR_INI_SIZE) gg_log('файл больше upload_max_filesize=' . ini_get('upload_max_filesize') . ' — проверьте php.ini хостинга');
+  }
   [$v, $errors] = gg_validate($_POST, $files);
   if ($errors) gg_fail(400, 'invalid', ['fields' => $errors]);
 
   $mail = $cfg['mail'] ?? null;
   $tg = $cfg['telegram'] ?? null;
-  $channels = [];
-  if (!empty($mail['to']) && preg_match('/^[^\s@<>]+@[^\s@<>]+$/', (string) ($mail['from'] ?? ''))) $channels['почта'] = fn($l, $f) => gg_send_mail($mail, $l, $f);
-  if (!empty($tg['token']) && !empty($tg['chat_id'])) $channels['telegram'] = fn($l, $f) => gg_send_tg($tg, $l, $f);
-  if (!$channels) { gg_log('ни один канал доставки не настроен'); gg_fail(500, 'not_configured'); }
+  $hasMail = !empty($mail['to']) && preg_match('/^[^\s@<>]+@[^\s@<>]+$/', (string) ($mail['from'] ?? ''));
+  $hasTg = !empty($tg['token']) && !empty($tg['chat_id']);
+  if (!$hasMail && !$hasTg) { gg_log('ни один канал доставки не настроен'); gg_fail(500, 'not_configured'); }
 
   $at = gmdate('Y-m-d\TH:i:s.000\Z', $now);
   $lead = [
@@ -348,15 +394,32 @@ function gg_handle(): never {
     'ip' => $ip,
   ];
   if ($suspect !== '') $lead['suspect'] = $suspect;
+  if ($files) {
+    $ok = true;
+    try { $ok = gg_quota_ok($work, $now, array_sum(array_column($files, 'size')), (int) ($cfg['day_bytes'] ?? GG_DAY_BYTES)); }
+    catch (Throwable $e) { gg_log('суточный предел: ' . $e->getMessage()); }
+    if (!$ok) {
+      gg_log("{$lead['id']}: суточный предел файлов исчерпан, вложения отброшены");
+      $lead['filesDropped'] = true;
+      $files = [];
+    }
+  }
 
   $stored = false;
   if ($dir !== '') {
     try { gg_store($dir, $lead, $files); $stored = true; } catch (Throwable $e) { gg_log('резервная копия не записана: ' . $e->getMessage()); }
     try { gg_purge_daily($dir, $now); } catch (Throwable $e) { gg_log('очистка: ' . $e->getMessage()); }
   }
-  $delivered = false;
-  foreach ($channels as $name => $send) {
-    try { $send($lead, $files); $delivered = true; } catch (Throwable $e) { gg_log("{$lead['id']}: канал «{$name}» не доставил: " . $e->getMessage()); }
+  // Доставка — канал, который несёт заявку целиком: почта или Telegram full. Уведомление notice без ПДн
+  // доставкой не считается: оно лишь сообщает номер и где искать заявку. Telegram — последним: он медленнее
+  $delivered = $mailed = false;
+  if ($hasMail) {
+    try { gg_send_mail($mail, $lead, $files); $delivered = $mailed = true; } catch (Throwable $e) { gg_log("{$lead['id']}: канал «почта» не доставил: " . $e->getMessage()); }
+  }
+  if ($hasTg) {
+    $where = $mailed ? 'Подробности — в почте.' : ($stored ? 'Почта не отправлена — заявка в резервной копии на сервере.' : 'Почта не отправлена, резервная копия не записана — клиенту показана ошибка.');
+    try { gg_send_tg($tg, $lead, $files, $where); if (($tg['mode'] ?? 'notice') === 'full') $delivered = true; }
+    catch (Throwable $e) { gg_log("{$lead['id']}: канал «telegram» не доставил: " . $e->getMessage()); }
   }
   if ($delivered) gg_respond(200, ['ok' => true]);
   // Каналы молчат, но заявка сохранена на диске — пользователю не нужно отправлять её повторно

@@ -51,7 +51,7 @@ let storeN = 0;
 async function config(c) {
   const store = c.store === false ? '' : `${tmp}/store${++storeN}`;
   const php = (v) => (typeof v === 'object' && v ? `[${Object.entries(v).map(([k, x]) => `'${k}' => ${php(x)}`).join(', ')}]` : JSON.stringify(v));
-  const body = { store_dir: store, now: c.now ?? T0, ...(c.mail ? { mail: c.mail } : {}), ...(c.telegram ? { telegram: c.telegram } : {}) };
+  const body = { store_dir: store, now: c.now ?? T0, ...(c.day_bytes ? { day_bytes: c.day_bytes } : {}), ...(c.mail ? { mail: c.mail } : {}), ...(c.telegram ? { telegram: c.telegram } : {}) };
   await writeFile(cfgFile, `<?php\nreturn ${php(body)};\n`);
   return store;
 }
@@ -175,7 +175,8 @@ test('PHP: резервная копия — заявка сохраняется
     const lead = JSON.parse((await readFile(path.join(store, 'leads.jsonl'), 'utf8')).trim());
     assert.equal(lead.name, 'Иван Петров');
     assert.equal(lead.consentAt, '2026-11-03T10:00:00.000Z');
-    assert.equal(await readFile(path.join(store, 'files', lead.id, 'a.txt'), 'utf8'), 'abc');
+    assert.equal(await readFile(path.join(store, 'files', lead.id, '1.txt'), 'utf8'), 'abc');
+    assert.deepEqual(lead.files, [{ name: 'a.txt', size: 3 }]);
     await config({ telegram, store: false });
     assert.deepEqual(await post(form()), { status: 502, body: { ok: false, error: 'delivery_failed' } });
     const log = await readFile(path.join(tmp, 'php.log'), 'utf8');
@@ -261,4 +262,83 @@ test('PHP: SMTP без шифрования и без STARTTLS — пароль 
     assert.equal((await post(form())).status, 502);
     assert.doesNotMatch(got.join(''), /AUTH/);
   } finally { srv.close(); }
+});
+
+test('PHP: почта не ушла, Telegram notice ушёл — это не доставка: DELIVERY_FAILED, без копии — 502', opts, async () => {
+  const tg = await fakeTg();
+  const closed = net.createServer();
+  const dead = await listen(closed);
+  await new Promise((r) => closed.close(r));
+  try {
+    const mail = { transport: 'smtp', host: '127.0.0.1', port: dead, secure: false, from: 'by@grosgroup.ru', to: 'a@example.com' };
+    const telegram = { token: '1:T', chat_id: '-100', api_base: `http://127.0.0.1:${tg.port}`, mode: 'notice' };
+    await config({ mail, telegram });
+    assert.deepEqual(await post(form()), { status: 200, body: { ok: true } });
+    const text = decodeURIComponent(tg.got[0].body.replace(/\+/g, ' '));
+    assert.match(text, /Почта не отправлена — заявка в резервной копии/);
+    const log = await readFile(path.join(tmp, 'php.log'), 'utf8');
+    assert.match(log, /канал «почта» не доставил: SMTP: нет соединения/);
+    assert.match(log, /DELIVERY_FAILED/);
+    await config({ mail, telegram, store: false });
+    assert.deepEqual(await post(form()), { status: 502, body: { ok: false, error: 'delivery_failed' } });
+    assert.equal(tg.got.length, 2);
+  } finally { tg.srv.close(); }
+});
+
+test('PHP: управляющие символы — NUL в почте отклоняется, перевод строки в имени становится пробелом', opts, async () => {
+  await config({ mail: MAIL });
+  const r = await post(form({ email: 'a\u0000b@example.ru' }));
+  assert.equal(r.status, 400);
+  assert.deepEqual(Object.keys(r.body.fields), ['email']);
+  assert.equal((await post(form({ name: 'Иван\nТелефон: +7 000', email: 'x\u001b@example.ru' }))).status, 400);
+  assert.equal((await post(form({ name: 'Иван\r\nПетров' }))).status, 200);
+  assert.match((await mailText()).text, /^Имя: Иван Петров$/m);
+});
+
+test('PHP: длинное имя файла (CJK) — на диске 1.pdf, в письме ≤ 150 байт, строки письма ≤ 998, слова ≤ 75', opts, async () => {
+  const store = await config({ mail: MAIL });
+  const long = '图'.repeat(120) + '.pdf';
+  assert.equal((await post(form({}, [{ name: long, data: 'x' }]))).status, 200);
+  const lead = JSON.parse((await readFile(path.join(store, 'leads.jsonl'), 'utf8')).trim());
+  assert.ok(Buffer.byteLength(lead.files[0].name) <= 150);
+  assert.match(lead.files[0].name, /^图+\.pdf$/);
+  assert.deepEqual(await readdir(path.join(store, 'files', lead.id)), ['1.pdf']);
+  const { raw } = await mailText();
+  assert.ok(raw.split('\r\n').every((l) => Buffer.byteLength(l) <= 998));
+  for (const w of raw.match(/=\?UTF-8\?B\?[^?]*\?=/g)) assert.ok(w.length <= 75, w);
+});
+
+test('PHP: суточный предел файлов — заявка проходит без вложений, в письме пометка', opts, async () => {
+  const store = await config({ mail: MAIL, day_bytes: 10 });
+  assert.equal((await post(form({}, [{ name: 'a.pdf', data: 'x'.repeat(8) }]))).status, 200);
+  assert.equal((await post(form({}, [{ name: 'b.pdf', data: 'x'.repeat(8) }]))).status, 200);
+  const { raw, text } = await mailText();
+  assert.match(text, /Файлы: b\.pdf \(1 КБ\) — не приложены: суточный предел/);
+  assert.equal(raw.split(/--gg-[0-9a-f]+/).length, 3);   // преамбула, текст, закрывающая граница — вложения нет
+  const leads = (await readFile(path.join(store, 'leads.jsonl'), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(leads[1].filesDropped, true);
+  assert.deepEqual(await readdir(path.join(store, 'files')), [leads[0].id]);
+});
+
+test('PHP: files[a][b] пропускается без предупреждений PHP', opts, async () => {
+  await config({ mail: MAIL });
+  await writeFile(path.join(tmp, 'php.log'), '');
+  const fd = form();
+  fd.append('files[a][b]', new Blob(['x']), 'x.pdf');
+  assert.deepEqual(await post(fd), { status: 200, body: { ok: true } });
+  assert.doesNotMatch(await readFile(path.join(tmp, 'php.log'), 'utf8'), /Warning|Notice|Deprecated/);
+});
+
+test('PHP: функции — размер из ini, обрезка для Telegram по UTF-16, encoded-word по байтам', opts, () => {
+  const code = `require '${API}/lead.php';
+    $cut = gg_tg_cut(str_repeat('a', 3) . str_repeat('😀', 10), 6);
+    echo json_encode([gg_ini_bytes('8M'), gg_ini_bytes('1g'), gg_ini_bytes('512K'), gg_ini_bytes('100'), $cut, gg_tg_cut('коротко', 4000),
+      max(array_map('strlen', explode("\\r\\n ", gg_mime_header(str_repeat('😀', 30))))), gg_ext('pdf'), gg_safe_name('../../x.pdf')], JSON_UNESCAPED_UNICODE);`;
+  const out = JSON.parse(execFileSync(PHP, ['-r', code], { encoding: 'utf8' }));
+  assert.deepEqual(out.slice(0, 4), [8 << 20, 1 << 30, 512 << 10, 100]);
+  assert.equal(out[4], 'aaa😀');
+  assert.equal(out[5], 'коротко');
+  assert.ok(out[6] <= 75);
+  assert.equal(out[7], '');
+  assert.equal(out[8], 'x.pdf');
 });

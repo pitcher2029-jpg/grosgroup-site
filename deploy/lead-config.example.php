@@ -9,7 +9,7 @@ return [
   'mail' => [
     // 'mail' — sendmail хостинга (SPF домена разрешает сервер хостинга); 'smtp' — через ящик на домене
     'transport' => 'mail',
-    'to' => 'rosatomicalchemist@gmail.com',      // на время проверки; после — by@grosgroup.ru
+    'to' => 'by@grosgroup.ru',                   // несколько адресов — через запятую
     'from' => 'noreply@grosgroup.ru',
     'from_name' => 'Сайт GROSGROUP',
     // для 'smtp':
