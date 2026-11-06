@@ -270,28 +270,28 @@
                 <div class="field">
                   <label class="field__label" for="f-name">Имя</label>
                   <div class="field__control">
-                    <input class="input" id="f-name" name="name" type="text" autocomplete="name" required maxlength="80" aria-describedby="f-name-err">
+                    <input class="input ym-disable-keys" id="f-name" name="name" type="text" autocomplete="name" required maxlength="80" aria-describedby="f-name-err">
                     <p class="field__error" id="f-name-err" aria-live="polite"></p>
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label" for="f-phone">Телефон</label>
                   <div class="field__control">
-                    <input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="+7 (___) ___-__-__" aria-describedby="f-phone-err">
+                    <input class="input ym-disable-keys" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="+7 (___) ___-__-__" aria-describedby="f-phone-err">
                     <p class="field__error" id="f-phone-err" aria-live="polite"></p>
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label" for="f-email">Эл.&nbsp;почта</label>
                   <div class="field__control">
-                    <input class="input" id="f-email" name="email" type="email" autocomplete="email" maxlength="120" aria-describedby="f-email-err">
+                    <input class="input ym-disable-keys" id="f-email" name="email" type="email" autocomplete="email" maxlength="120" aria-describedby="f-email-err">
                     <p class="field__error" id="f-email-err" aria-live="polite"></p>
                   </div>
                 </div>
                 <div class="field field--area">
                   <label class="field__label" for="f-desc">Описание закупки</label>
                   <div class="field__control">
-                    <textarea class="input input--area" id="f-desc" name="description" rows="4" maxlength="3000" placeholder="Что нужно, в каком количестве и к какому сроку" aria-describedby="f-desc-err"></textarea>
+                    <textarea class="input input--area ym-disable-keys" id="f-desc" name="description" rows="4" maxlength="3000" placeholder="Что нужно, в каком количестве и к какому сроку" aria-describedby="f-desc-err"></textarea>
                     <p class="field__error" id="f-desc-err" aria-live="polite"></p>
                   </div>
                 </div>
@@ -315,7 +315,7 @@
                 </label>
                 <input class="sr-only" id="f-files" name="files" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.dwg,.zip" aria-describedby="f-files-hint">
                 <span class="sr-only" id="f-files-hint">До 5 файлов, каждый до 10&nbsp;МБ, вместе до 15&nbsp;МБ: PDF, Word, Excel, CSV, изображения, DWG, ZIP</span>
-                <div class="pill pill--files" id="file-list" aria-live="polite">
+                <div class="pill pill--files ym-hide-content" id="file-list" aria-live="polite">
                   <span class="files__empty">Список файлов · до&nbsp;5&nbsp;шт., вместе до&nbsp;15&nbsp;МБ</span>
                 </div>
                 <button class="pill pill--btn pill--submit" type="submit">
@@ -325,7 +325,7 @@
               <p class="form__error" id="form-error" role="alert" hidden></p>
               <p class="form__note">Как мы храним и&nbsp;используем данные — в&nbsp;<a href="privacy.html">политике обработки персональных данных</a>.</p>
               <!-- Прикреплённые файлы: слой поверх нижнего отступа формы, вёрстку не сдвигает -->
-              <ul class="form__files" id="file-chips" aria-label="Прикреплённые файлы" hidden></ul>
+              <ul class="form__files ym-hide-content" id="file-chips" aria-label="Прикреплённые файлы" hidden></ul>
 
               <div class="form__done" hidden>
                 <h3 class="form__done-title" tabindex="-1">Заявка принята</h3>

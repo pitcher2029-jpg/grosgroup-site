@@ -9,7 +9,7 @@
     maxFiles: 5,
     maxFileSize: 10 * 1024 * 1024,
     maxTotalSize: 15 * 1024 * 1024, // письмо с вложениями должно пройти в почту (у Gmail предел 25 МБ с кодированием)
-    metrikaId: '',           // номер счётчика Яндекс Метрики; пусто — счётчика и окна о cookie нет
+    metrikaId: '114101263',  // номер счётчика Яндекс Метрики; пусто — счётчика и окна о cookie нет
   };
 
   const $ = (s, root = document) => root.querySelector(s);
@@ -30,9 +30,12 @@
     window.ym.l = Date.now();
     const s = document.createElement('script');
     s.async = true;
-    s.src = 'https://mc.yandex.ru/metrika/tag.js';
+    s.src = 'https://mc.yandex.ru/metrika/tag.js?id=' + id;
     document.head.append(s);
-    window.ym(id, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+    window.dataLayer = window.dataLayer || [];
+    // Параметры — из кода счётчика от специалиста по продвижению (2026-11-06). Вебвизор не пишет поля формы
+    // и имена файлов: у них классы ym-disable-keys и ym-hide-content в index.html
+    window.ym(id, 'init', { ssr: true, webvisor: true, clickmap: true, ecommerce: 'dataLayer', referrer: document.referrer, url: location.href, accurateTrackBounce: true, trackLinks: true });
   };
   // Цели: lead — заявка отправлена, tel и mail — клик по телефону и почте
   const goal = (name) => { if (metrikaOn) window.ym(Number(CONFIG.metrikaId), 'reachGoal', name); };
