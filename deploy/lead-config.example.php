@@ -9,12 +9,12 @@ return [
   'mail' => [
     // 'mail' — sendmail хостинга (SPF домена разрешает сервер хостинга); 'smtp' — через ящик на домене
     'transport' => 'mail',
-    'to' => 'by@grosgroup.ru',                   // несколько адресов — через запятую
+    'to' => 'buy@grosgroup.ru',                   // несколько адресов — через запятую
     'from' => 'noreply@grosgroup.ru',
     'from_name' => 'Сайт GROSGROUP',
     // для 'smtp':
     // 'host' => 'mail.hosting.reg.ru', 'port' => 465, 'secure' => true,
-    // 'user' => 'by@grosgroup.ru', 'pass' => '<пароль ящика>', 'from' => 'by@grosgroup.ru',
+    // 'user' => 'buy@grosgroup.ru', 'pass' => '<пароль ящика>', 'from' => 'buy@grosgroup.ru',
   ],
 
   // Дубль заявки в Telegram. 'notice' — номер заявки без персональных данных;

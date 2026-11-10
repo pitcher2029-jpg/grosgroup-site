@@ -241,10 +241,10 @@ async function fakeSmtps() {
 test('PHP: почта через SMTP (SSL) — AUTH, получатели, точка в начале строки экранируется', opts, async () => {
   const smtp = await fakeSmtps();
   try {
-    await config({ mail: { transport: 'smtp', host: '127.0.0.1', port: smtp.port, secure: true, verify: false, user: 'by@grosgroup.ru', pass: 'pw', from: 'by@grosgroup.ru', to: 'a@example.com, b@example.com' } });
+    await config({ mail: { transport: 'smtp', host: '127.0.0.1', port: smtp.port, secure: true, verify: false, user: 'buy@grosgroup.ru', pass: 'pw', from: 'buy@grosgroup.ru', to: 'a@example.com, b@example.com' } });
     assert.equal((await post(form({ description: 'строка\n.точка' }))).status, 200);
-    assert.ok(smtp.got.cmds.includes('AUTH PLAIN ' + Buffer.from('\0by@grosgroup.ru\0pw').toString('base64')));
-    assert.ok(smtp.got.cmds.includes('MAIL FROM:<by@grosgroup.ru>'));
+    assert.ok(smtp.got.cmds.includes('AUTH PLAIN ' + Buffer.from('\0buy@grosgroup.ru\0pw').toString('base64')));
+    assert.ok(smtp.got.cmds.includes('MAIL FROM:<buy@grosgroup.ru>'));
     assert.deepEqual(smtp.got.cmds.filter((c) => c.startsWith('RCPT')), ['RCPT TO:<a@example.com>', 'RCPT TO:<b@example.com>']);
     assert.match(smtp.got.data, /^To: a@example\.com, b@example\.com\r\nSubject: =\?UTF-8\?B\?/);
   } finally { smtp.srv.close(); }
@@ -258,7 +258,7 @@ test('PHP: SMTP без шифрования и без STARTTLS — пароль 
   });
   const p = await listen(srv);
   try {
-    await config({ mail: { transport: 'smtp', host: '127.0.0.1', port: p, secure: false, user: 'u', pass: 'pw', from: 'by@grosgroup.ru', to: 'a@example.com' }, store: false });
+    await config({ mail: { transport: 'smtp', host: '127.0.0.1', port: p, secure: false, user: 'u', pass: 'pw', from: 'buy@grosgroup.ru', to: 'a@example.com' }, store: false });
     assert.equal((await post(form())).status, 502);
     assert.doesNotMatch(got.join(''), /AUTH/);
   } finally { srv.close(); }
@@ -270,7 +270,7 @@ test('PHP: почта не ушла, Telegram notice ушёл — это не д
   const dead = await listen(closed);
   await new Promise((r) => closed.close(r));
   try {
-    const mail = { transport: 'smtp', host: '127.0.0.1', port: dead, secure: false, from: 'by@grosgroup.ru', to: 'a@example.com' };
+    const mail = { transport: 'smtp', host: '127.0.0.1', port: dead, secure: false, from: 'buy@grosgroup.ru', to: 'a@example.com' };
     const telegram = { token: '1:T', chat_id: '-100', api_base: `http://127.0.0.1:${tg.port}`, mode: 'notice' };
     await config({ mail, telegram });
     assert.deepEqual(await post(form()), { status: 200, body: { ok: true } });
